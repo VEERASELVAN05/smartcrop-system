@@ -7,6 +7,7 @@ import {
 } from 'recharts';
 import translations from '../translations';
 import cropRecommendation from '../cropRecommendation';
+import { getSoilValues } from '../soilData';
 
 function Dashboard() {
   const navigate = useNavigate();
@@ -47,23 +48,36 @@ function Dashboard() {
   };
 
   useEffect(() => {
-    if (!token) { navigate('/login'); return; }
-    // Load profile
-    axios.get('http://127.0.0.1:8000/profile', {
-      headers: { Authorization: `Bearer ${token}` }
-    }).then(res => {
-      if (res.data.has_profile) {
-        setProfile(res.data.profile);
-        fetchWeather(res.data.profile.district);
-      }
-    }).catch(() => navigate('/login'));
+  if (!token) { navigate('/login'); return; }
+  axios.get('http://127.0.0.1:8000/profile', {
+    headers: { Authorization: `Bearer ${token}` }
+  }).then(res => {
+    if (res.data.has_profile) {
+      setProfile(res.data.profile);
+      fetchWeather(res.data.profile.district);
 
-    // Load history from localStorage
-    const savedHistory = JSON.parse(
-      localStorage.getItem('predictionHistory') || '[]'
-    );
-    setHistory(savedHistory);
-  }, []);
+      // Auto fill N, P, K, pH from crop + soil type
+      const soilVals = getSoilValues(
+        res.data.profile.crop_type,
+        res.data.profile.soil_type
+      );
+      setForm(prev => ({
+        ...prev,
+        N: soilVals.N.toString(),
+        P: soilVals.P.toString(),
+        K: soilVals.K.toString(),
+        ph: soilVals.ph.toString()
+      }));
+      console.log("✅ Soil values auto-filled:", soilVals);
+    }
+  }).catch(() => navigate('/login'));
+
+  // Load history
+  const savedHistory = JSON.parse(
+    localStorage.getItem('predictionHistory') || '[]'
+  );
+  setHistory(savedHistory);
+}, []);
 
   const fetchWeather = async (district) => {
     setWeatherLoading(true);
@@ -114,15 +128,15 @@ function Dashboard() {
 
   // Auto fill weather values
   const handleAutoFill = () => {
-    if (!weather) return;
-    setForm(prev => ({
-      ...prev,
-      temperature: weather.temperature.toString(),
-      humidity: weather.humidity.toString(),
-      rainfall: weather.rainfall.toString()
-    }));
-    alert('✅ Temperature, Humidity and Rainfall filled from live weather!');
-  };
+  if (!weather) return;
+  setForm(prev => ({
+    ...prev,
+    temperature: weather.temperature.toString(),
+    humidity: weather.humidity.toString(),
+    rainfall: weather.rainfall.toString()
+  }));
+  alert('✅ Weather values auto-filled!');
+};
 
   const handlePredict = async () => {
     for (let key in form) {
@@ -317,14 +331,14 @@ function Dashboard() {
               <button
                 onClick={handleAutoFill}
                 style={{
-                  backgroundColor: '#2C7A3F',
-                  color: 'white', border: 'none',
-                  borderRadius: '8px', padding: '7px 14px',
-                  cursor: 'pointer', fontSize: '12px',
-                  fontWeight: 'bold'
+                backgroundColor: '#2C7A3F',
+                color: 'white', border: 'none',
+                borderRadius: '8px', padding: '7px 14px',
+                cursor: 'pointer', fontSize: '12px',
+                fontWeight: 'bold'
                 }}
               >
-                ⚡ Auto-fill Weather Values
+              ⚡ Auto-fill Weather Values
               </button>
             )}
           </div>
