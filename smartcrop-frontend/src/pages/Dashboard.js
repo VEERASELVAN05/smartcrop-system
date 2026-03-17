@@ -186,6 +186,18 @@ function Dashboard() {
     navigate('/login');
   };
 
+  const handleChangeLanguage = () => {
+    // Only remove language — keep token and user data
+    localStorage.removeItem('language');
+    // Clear any cached translations
+    Object.keys(localStorage).forEach(key => {
+      if (key.startsWith('translations_')) {
+        localStorage.removeItem(key);
+      }
+    });
+    navigate('/language');
+  };
+
   const getRiskColors = (color) => {
     if (color === 'green')
       return { bg: '#D1FAE5', border: '#059669', text: '#059669' };
@@ -250,10 +262,8 @@ function Dashboard() {
             👤 {user.name}
           </span>
           <button
-            onClick={() => {
-              localStorage.removeItem('language');
-              navigate('/');
-            }}
+
+            onClick={handleChangeLanguage}
             style={{
               backgroundColor: 'transparent',
               border: '1px solid #9EC8B9',

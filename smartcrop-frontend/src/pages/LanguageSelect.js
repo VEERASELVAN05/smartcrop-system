@@ -13,9 +13,18 @@ function LanguageSelect() {
   const navigate = useNavigate();
 
   const handleSelect = (langCode) => {
-    localStorage.setItem('language', langCode);
+  localStorage.setItem('language', langCode);
+
+  // Check if user already logged in
+  const token = localStorage.getItem('token');
+  if (token) {
+    // Already logged in — go directly to dashboard
+    navigate('/dashboard');
+  } else {
+    // Not logged in — go to login
     navigate('/login');
-  };
+  }
+};
 
   return (
     <div style={{
@@ -106,6 +115,24 @@ function LanguageSelect() {
               </button>
             ))}
           </div>
+        </div>
+
+        {/* Add this below the language grid */}
+        <div style={{
+          backgroundColor: '#ECFDF5',
+          border: '1px solid #A7F3D0',
+          borderRadius: '8px',
+          padding: '10px',
+          marginTop: '15px',
+          textAlign: 'center'
+        }}>
+          <p style={{
+            margin: 0, fontSize: '12px', color: '#065F46'
+          }}>
+            🤖 Powered by AI Translation —
+            entire app automatically translates
+            to your chosen language
+          </p>
         </div>
 
         <p style={{

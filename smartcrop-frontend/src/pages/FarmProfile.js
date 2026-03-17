@@ -2,11 +2,15 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import translations from '../translations';
+import { getOptions } from '../optionTranslations';
+import optionTranslations from '../optionTranslations';
+
 
 function FarmProfile() {
   const navigate = useNavigate();
   const lang = localStorage.getItem('language') || 'English';
   const t = translations[lang];
+  const options = getOptions(lang);
 
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
@@ -45,10 +49,9 @@ function FarmProfile() {
     marginTop: '8px', boxSizing: 'border-box'
   };
 
-  const crops = ['Rice','Wheat','Maize','Cotton',
-    'Sugarcane','Millet','Groundnut','Soybean','Banana','Mango'];
-  const soils = ['Red Soil','Black Soil','Sandy Soil','Loamy Soil','Clay Soil'];
-  const irrigations = ['Rain-fed','Canal','Borewell','Drip Irrigation','Sprinkler'];
+  const crops = options.crops;
+  const soils = options.soils;
+  const irrigations = options.irrigations;
 
   return (
     <div style={{
@@ -171,25 +174,49 @@ function FarmProfile() {
                 {t.sowingSeason}
               </label>
               <select
-                name="sowing_season" value={form.sowing_season}
-                onChange={handleChange} style={selectStyle}
+                name="sowing_season"
+                value={form.sowing_season}
+                onChange={handleChange}
+                style={selectStyle}
               >
-                <option value="">{t.selectSeason}</option>
-                <option value="Kharif">Kharif (June – October)</option>
-                <option value="Rabi">Rabi (November – March)</option>
-                <option value="Zaid">Zaid (March – June)</option>
-              </select>
+              <option value="">{t.selectSeason}</option>
+              {options.seasons.map((season, i) => (
+                <option
+                  key={options.seasonValues[i]}
+                  value={options.seasonValues[i]}
+                >
+                  {season}
+                </option>
+              ))}
+            </select>
             </div>
             <div style={{ marginBottom: '15px' }}>
               <label style={{ fontWeight: 'bold', color: '#374151', fontSize: '14px' }}>
                 📍 {t.district}
               </label>
-              <input
-                type="text" name="district"
-                value={form.district} onChange={handleChange}
-                placeholder="e.g. Coimbatore"
-                style={{ ...selectStyle, backgroundColor: 'white' }}
-              />
+              <select
+                name="district"
+                value={form.district}
+                onChange={handleChange}
+                style={selectStyle}
+              >
+              <option value="">
+                {lang === 'Tamil' ? 'மாவட்டத்தை தேர்ந்தெடுக்கவும்' :
+                lang === 'Hindi' ? 'जिला चुनें' :
+                lang === 'Telugu' ? 'జిల్లా ఎంచుకోండి' :
+                lang === 'Malayalam' ? 'ജില്ല തിരഞ്ഞെടുക്കുക' :
+                lang === 'Kannada' ? 'ಜಿಲ್ಲೆ ಆಯ್ಕೆ ಮಾಡಿ' :
+                'Select district'}
+              </option>
+              {options.districts.map((d, i) => (
+                <option
+                  key={optionTranslations['English'].districts[i]}
+                  value={optionTranslations['English'].districts[i]}
+                >
+                  {d}
+                </option>
+              ))}
+            </select>
             </div>
             <div style={{ marginBottom: '15px' }}>
               <label style={{ fontWeight: 'bold', color: '#374151', fontSize: '14px' }}>
