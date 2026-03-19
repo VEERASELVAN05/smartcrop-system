@@ -4,6 +4,7 @@ import Login from './pages/Login';
 import Register from './pages/Register';
 import FarmProfile from './pages/FarmProfile';
 import Dashboard from './pages/Dashboard';
+import Insurance from './pages/Insurance';
 
 function App() {
   const token = localStorage.getItem('token');
@@ -23,6 +24,7 @@ function App() {
         <Route path="/register" element={<Register />} />
         <Route path="/profile-setup" element={<FarmProfile />} />
         <Route path="/dashboard" element={<Dashboard />} />
+        <Route path="/insurance" element={<Insurance />} />
       </Routes>
     </BrowserRouter>
   );

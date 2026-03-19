@@ -585,7 +585,23 @@ function Dashboard() {
                   }}>
                     {result.insurance_status}
                   </p>
+
                 </div>
+                {result && result.color === 'red' && (
+  <button
+    onClick={() => navigate('/insurance')}
+    style={{
+      width: '100%', padding: '12px',
+      marginTop: '12px',
+      backgroundColor: '#DC2626',
+      color: 'white', border: 'none',
+      borderRadius: '8px', fontSize: '14px',
+      fontWeight: 'bold', cursor: 'pointer'
+    }}
+  >
+    📋 Generate Insurance Claim →
+  </button>
+)}
               </div>
             </div>
           );

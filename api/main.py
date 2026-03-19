@@ -28,8 +28,8 @@ app.add_middleware(
 )
 
 try:
-    model = joblib.load(r"C:\Users\mages\capstone\smartcrop-system\models\best_model_random_forest.pkl")
-    scaler = joblib.load(r"C:\Users\mages\capstone\smartcrop-system\models\scaler.pkl")
+    model = joblib.load(r"C:\Capstone Project\smartcrop-system\models\best_model_random_forest.pkl")
+    scaler = joblib.load(r"C:\Capstone Project\smartcrop-system\models\scaler.pkl")
     print("✅ SmartCrop API v2.0 started!")
     print("✅ Random Forest model loaded!")
     print("✅ Scaler loaded!")
