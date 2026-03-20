@@ -28,19 +28,40 @@ function FarmProfile() {
   };
 
   const handleSubmit = async () => {
-    setLoading(true);
-    try {
-      await axios.post(
-        'http://127.0.0.1:8000/profile',
-        { ...form, land_size: parseFloat(form.land_size) },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      navigate('/dashboard');
-    } catch {
+  setLoading(true);
+  try {
+    const token = localStorage.getItem('token');
+    console.log('Token:', token); // ← debug check
+
+    if (!token) {
+      alert('Session expired. Please login again.');
+      navigate('/login');
+      return;
+    }
+
+    await axios.post(
+      'http://127.0.0.1:8000/profile',
+      { ...form, land_size: parseFloat(form.land_size) },
+      {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      }
+    );
+    navigate('/dashboard');
+  } catch (err) {
+    console.log('Error:', err.response?.data);
+    if (err.response?.status === 401) {
+      alert('Session expired. Please login again.');
+      localStorage.clear();
+      navigate('/login');
+    } else {
       alert('Error saving profile. Please try again.');
     }
-    setLoading(false);
-  };
+  }
+  setLoading(false);
+};
 
   const selectStyle = {
     width: '100%', padding: '12px',

@@ -8,6 +8,8 @@ import pandas as pd
 from datetime import datetime, timedelta
 from jose import JWTError, jwt
 from passlib.context import CryptContext
+from database import get_db, init_db, Farmer, FarmProfile, RiskPrediction, InsuranceClaim
+from sqlalchemy.orm import Session
 
 # ─────────────────────────────────────────
 # APP SETUP
@@ -17,6 +19,8 @@ app = FastAPI(
     description="AI-Powered Crop Failure Prediction System",
     version="2.0.0"
 )
+# Initialize database on startup
+init_db()
 
 # ⭐ CORS — THIS MUST BE RIGHT AFTER app = FastAPI()
 app.add_middleware(
@@ -28,8 +32,8 @@ app.add_middleware(
 )
 
 try:
-    model = joblib.load(r"C:\Capstone Project\smartcrop-system\models\best_model_random_forest.pkl")
-    scaler = joblib.load(r"C:\Capstone Project\smartcrop-system\models\scaler.pkl")
+    model = joblib.load(r"C:\Users\tej13\smartcrop-system\models\best_model_random_forest.pkl")
+    scaler = joblib.load(r"C:\Users\tej13\smartcrop-system\models\scaler.pkl" )
     print("✅ SmartCrop API v2.0 started!")
     print("✅ Random Forest model loaded!")
     print("✅ Scaler loaded!")
@@ -65,7 +69,7 @@ class LoginRequest(BaseModel):
     phone: str
     password: str
 
-class FarmProfile(BaseModel):
+class FarmProfileRequest(BaseModel):
     crop_type: str
     land_size: float
     soil_type: str
@@ -100,7 +104,8 @@ def create_token(phone: str):
     )
 
 def get_current_user(
-    credentials: HTTPAuthorizationCredentials = Depends(security)
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+    db: Session = Depends(get_db)
 ):
     try:
         payload = jwt.decode(
@@ -108,11 +113,30 @@ def get_current_user(
             SECRET_KEY, algorithms=[ALGORITHM]
         )
         phone = payload.get("sub")
-        if phone not in users_db:
-            raise HTTPException(status_code=401, detail="User not found")
-        return users_db[phone]
+        if not phone:
+            raise HTTPException(
+                status_code=401, detail="Invalid token"
+            )
+
+        # Get from PostgreSQL database
+        farmer = db.query(Farmer).filter(
+            Farmer.phone == phone
+        ).first()
+
+        if not farmer:
+            raise HTTPException(
+                status_code=401, detail="User not found"
+            )
+
+        return {
+            "name": farmer.name,
+            "phone": farmer.phone,
+            "district": farmer.district
+        }
     except JWTError:
-        raise HTTPException(status_code=401, detail="Invalid token")
+        raise HTTPException(
+            status_code=401, detail="Invalid token"
+        )
 
 # ─────────────────────────────────────────
 # ROUTE 1 — Health Check
@@ -130,20 +154,23 @@ def health():
 # ROUTE 2 — Register
 # ─────────────────────────────────────────
 @app.post("/register")
-def register(data: RegisterRequest):
+def register(data: RegisterRequest, db: Session = Depends(get_db)):
     try:
-        if data.phone in users_db:
+        existing = db.query(Farmer).filter(
+            Farmer.phone == data.phone).first()
+        if existing:
             raise HTTPException(
                 status_code=400,
                 detail="Phone number already registered"
             )
-        users_db[data.phone] = {
-            "name": data.name,
-            "phone": data.phone,
-            "district": data.district,
-            "password": hash_password(data.password),
-            "created_at": str(datetime.now())
-        }
+        farmer = Farmer(
+            name=data.name,
+            phone=data.phone,
+            district=data.district,
+            password=hash_password(data.password[:72])
+        )
+        db.add(farmer)
+        db.commit()
         token = create_token(data.phone)
         return {
             "message": f"Welcome to SmartCrop, {data.name}!",
@@ -157,86 +184,110 @@ def register(data: RegisterRequest):
     except HTTPException:
         raise
     except Exception as e:
+        db.rollback()
         raise HTTPException(status_code=500, detail=str(e))
-
 # ─────────────────────────────────────────
 # ROUTE 3 — Login
 # ─────────────────────────────────────────
 @app.post("/login")
-def login(data: LoginRequest):
+def login(data: LoginRequest, db: Session = Depends(get_db)):
     try:
-        user = users_db.get(data.phone)
-        if not user or not verify_password(data.password, user["password"]):
+        farmer = db.query(Farmer).filter(
+            Farmer.phone == data.phone).first()
+        if not farmer or not farmer.password or not verify_password(
+    data.password[:72], farmer.password):
             raise HTTPException(
                 status_code=401,
                 detail="Invalid phone number or password"
             )
         token = create_token(data.phone)
-        has_profile = data.phone in profiles_db
+        profile = db.query(FarmProfile).filter(
+            FarmProfile.phone == data.phone).first()
         return {
-            "message": f"Welcome back, {user['name']}!",
+            "message": f"Welcome back, {farmer.name}!",
             "token": token,
             "user": {
-                "name": user["name"],
-                "phone": user["phone"],
-                "district": user["district"]
+                "name": farmer.name,
+                "phone": farmer.phone,
+                "district": farmer.district
             },
-            "has_profile": has_profile
+            "has_profile": profile is not None
         }
     except HTTPException:
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-
 # ─────────────────────────────────────────
 # ROUTE 4 — Save Farm Profile
 # ─────────────────────────────────────────
 @app.post("/profile")
 def save_profile(
-    data: FarmProfile,
-    current_user: dict = Depends(get_current_user)
+    data: FarmProfileRequest,
+    current_user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db)
 ):
     try:
-        profiles_db[current_user["phone"]] = {
-            "crop_type": data.crop_type,
-            "land_size": data.land_size,
-            "soil_type": data.soil_type,
-            "irrigation_type": data.irrigation_type,
-            "sowing_season": data.sowing_season,
-            "district": data.district,
-            "village": data.village,
-            "saved_at": str(datetime.now())
-        }
-        return {
-            "message": "Farm profile saved successfully!",
-            "profile": profiles_db[current_user["phone"]]
-        }
+        existing = db.query(FarmProfile).filter(
+            FarmProfile.phone == current_user["phone"]
+        ).first()
+        if existing:
+            existing.crop_type = data.crop_type
+            existing.land_size = data.land_size
+            existing.soil_type = data.soil_type
+            existing.irrigation_type = data.irrigation_type
+            existing.sowing_season = data.sowing_season
+            existing.district = data.district
+            existing.village = data.village
+        else:
+            profile = FarmProfile(
+                phone=current_user["phone"],
+                crop_type=data.crop_type,
+                land_size=data.land_size,
+                soil_type=data.soil_type,
+                irrigation_type=data.irrigation_type,
+                sowing_season=data.sowing_season,
+                district=data.district,
+                village=data.village
+            )
+            db.add(profile)
+        db.commit()
+        return {"message": "Farm profile saved!"}
     except Exception as e:
+        db.rollback()
+        print(f"❌ Profile save error: {str(e)}")  # ← shows in terminal
         raise HTTPException(status_code=500, detail=str(e))
-
 # ─────────────────────────────────────────
 # ROUTE 5 — Get Profile
 # ─────────────────────────────────────────
 @app.get("/profile")
-def get_profile(current_user: dict = Depends(get_current_user)):
-    phone = current_user["phone"]
-    if phone not in profiles_db:
-        return {
-            "has_profile": False,
-            "message": "No farm profile found."
-        }
+def get_profile(
+    current_user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    profile = db.query(FarmProfile).filter(
+        FarmProfile.phone == current_user["phone"]).first()
+    if not profile:
+        return {"has_profile": False}
     return {
         "has_profile": True,
-        "profile": profiles_db[phone]
+        "profile": {
+            "crop_type": profile.crop_type,
+            "land_size": profile.land_size,
+            "soil_type": profile.soil_type,
+            "irrigation_type": profile.irrigation_type,
+            "sowing_season": profile.sowing_season,
+            "district": profile.district,
+            "village": profile.village
+        }
     }
-
 # ─────────────────────────────────────────
 # ROUTE 6 — Predict
 # ─────────────────────────────────────────
 @app.post("/predict")
 def predict(
     data: PredictRequest,
-    current_user: dict = Depends(get_current_user)
+    current_user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db)        # ← added this
 ):
     try:
         if model is None:
@@ -246,7 +297,7 @@ def predict(
             )
         input_data = pd.DataFrame(
             [[data.N, data.P, data.K, data.temperature,
-            data.humidity, data.ph, data.rainfall]],
+              data.humidity, data.ph, data.rainfall]],
             columns=['N', 'P', 'K', 'temperature',
                      'humidity', 'ph', 'rainfall']
         )
@@ -256,7 +307,7 @@ def predict(
         input_df = pd.DataFrame(
             input_scaled,
             columns=['N', 'P', 'K', 'temperature',
-                    'humidity', 'ph', 'rainfall']
+                     'humidity', 'ph', 'rainfall']
         )
 
         probability = model.predict_proba(input_df)[0][1]
@@ -288,6 +339,26 @@ def predict(
             advice = "Immediate action required! Irrigate and apply fertilizer."
             insurance = "ELIGIBLE — Insurance claim auto-triggered!"
 
+        # ← NEW: Save prediction to database
+        try:
+            prediction = RiskPrediction(
+                phone=current_user["phone"],
+                n_value=data.N,
+                p_value=data.P,
+                k_value=data.K,
+                temperature=data.temperature,
+                humidity=data.humidity,
+                ph=data.ph,
+                rainfall=data.rainfall,
+                risk_score=risk_score,
+                risk_status=status
+            )
+            db.add(prediction)
+            db.commit()
+        except Exception as db_error:
+            print(f"DB save error: {db_error}")
+            db.rollback()
+
         return {
             "farmer": current_user["name"],
             "risk_score": risk_score,
@@ -295,10 +366,112 @@ def predict(
             "color": color,
             "advice": advice,
             "insurance_status": insurance,
-            "contributing_factors": factors if factors else ["All parameters normal"],
+            "contributing_factors": factors if factors
+                else ["All parameters normal"],
             "timestamp": str(datetime.now())
         }
     except HTTPException:
         raise
     except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ─────────────────────────────────────────
+# ROUTE 7 — Get Risk History
+# ─────────────────────────────────────────
+@app.get("/history")
+def get_history(
+    current_user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    try:
+        predictions = db.query(RiskPrediction).filter(
+            RiskPrediction.phone == current_user["phone"]
+        ).order_by(
+            RiskPrediction.predicted_at.desc()
+        ).limit(10).all()
+
+        return {
+            "history": [
+                {
+                    "risk_score": p.risk_score,
+                    "risk_status": p.risk_status,
+                    "date": str(p.predicted_at)
+                }
+                for p in predictions
+            ]
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ─────────────────────────────────────────
+# ROUTE 8 — Generate Insurance Claim
+# ─────────────────────────────────────────
+@app.post("/claim")
+def generate_claim(
+    current_user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    try:
+        # Get latest prediction
+        latest = db.query(RiskPrediction).filter(
+            RiskPrediction.phone == current_user["phone"]
+        ).order_by(
+            RiskPrediction.predicted_at.desc()
+        ).first()
+
+        if not latest:
+            raise HTTPException(
+                status_code=400,
+                detail="No prediction found. Run prediction first."
+            )
+
+        if latest.risk_score < 60:
+            raise HTTPException(
+                status_code=400,
+                detail="Risk score below 60%. Not eligible for claim."
+            )
+
+        # Get farm profile
+        profile = db.query(FarmProfile).filter(
+            FarmProfile.phone == current_user["phone"]
+        ).first()
+
+        # Calculate compensation
+        land = profile.land_size if profile else 1.0
+        compensation = round(
+            10000 * land * (latest.risk_score / 100), 2
+        )
+
+        # Save claim to database
+        claim = InsuranceClaim(
+            phone=current_user["phone"],
+            risk_score=latest.risk_score,
+            crop_type=profile.crop_type if profile else "Unknown",
+            land_size=land,
+            compensation=compensation,
+            status="PENDING"
+        )
+        db.add(claim)
+        db.commit()
+        db.refresh(claim)
+
+        return {
+            "message": "Insurance claim generated successfully!",
+            "claim": {
+                "claim_id": claim.id,
+                "farmer": current_user["name"],
+                "crop": claim.crop_type,
+                "land_size": claim.land_size,
+                "risk_score": claim.risk_score,
+                "compensation": f"₹{compensation:,.2f}",
+                "status": claim.status,
+                "date": str(claim.created_at)
+            }
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        db.rollback()
         raise HTTPException(status_code=500, detail=str(e))
