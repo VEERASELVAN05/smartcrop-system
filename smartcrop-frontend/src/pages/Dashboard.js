@@ -261,8 +261,37 @@ function Dashboard() {
           <span style={{ color: '#9EC8B9', fontSize: '12px' }}>
             👤 {user.name}
           </span>
-          <button
 
+          <button
+            onClick={() => navigate('/chatbot')}
+            style={{
+              backgroundColor: '#2C7A3F',
+              border: 'none',
+              color: 'white',
+              padding: '6px 12px',
+              borderRadius: '6px',
+              cursor: 'pointer',
+              fontSize: '12px',
+              fontWeight: 'bold'
+            }}
+          >
+            🤖 AI Assistant
+          </button>
+
+          <button
+          onClick={() => navigate('/government')}
+          style={{
+            backgroundColor: 'transparent',
+            border: '1px solid #9EC8B9',
+            color: '#9EC8B9', padding: '5px 10px',
+            borderRadius: '6px', cursor: 'pointer',
+            fontSize: '11px'
+            }}
+          >
+            🏛️ Govt View
+          </button>
+
+          <button
             onClick={handleChangeLanguage}
             style={{
               backgroundColor: 'transparent',

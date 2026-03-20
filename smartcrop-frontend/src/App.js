@@ -5,6 +5,10 @@ import Register from './pages/Register';
 import FarmProfile from './pages/FarmProfile';
 import Dashboard from './pages/Dashboard';
 import Insurance from './pages/Insurance';
+import Chatbot from './pages/Chatbot';
+import GovernmentDashboard from './pages/GovernmentDashboard';
+
+
 
 function App() {
   const token = localStorage.getItem('token');
@@ -24,7 +28,12 @@ function App() {
         <Route path="/register" element={<Register />} />
         <Route path="/profile-setup" element={<FarmProfile />} />
         <Route path="/dashboard" element={<Dashboard />} />
+
+      </Routes>
+      <Routes>
         <Route path="/insurance" element={<Insurance />} />
+        <Route path="/chatbot" element={<Chatbot />} />
+        <Route path="/government" element={<GovernmentDashboard />} />
       </Routes>
     </BrowserRouter>
   );
