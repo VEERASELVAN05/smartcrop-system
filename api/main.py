@@ -32,8 +32,8 @@ app.add_middleware(
 )
 
 try:
-    model = joblib.load(r"C:\Users\tej13\smartcrop-system\models\best_model_random_forest.pkl")
-    scaler = joblib.load(r"C:\Users\tej13\smartcrop-system\models\scaler.pkl" )
+    model = joblib.load(r"C:\Users\mages\capstone\smartcrop-system\models\best_model_random_forest.pkl")
+    scaler = joblib.load(r"C:\Users\mages\capstone\smartcrop-system\models\scaler.pkl")
     print("✅ SmartCrop API v2.0 started!")
     print("✅ Random Forest model loaded!")
     print("✅ Scaler loaded!")
@@ -469,6 +469,87 @@ def generate_claim(
                 "status": claim.status,
                 "date": str(claim.created_at)
             }
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
+    
+# ─────────────────────────────────────────
+# ROUTE 9 — Get All Claims (Insurance Co.)
+# ─────────────────────────────────────────
+@app.get("/all-claims")
+def get_all_claims(db: Session = Depends(get_db)):
+    try:
+        claims = db.query(InsuranceClaim).order_by(
+            InsuranceClaim.created_at.desc()
+        ).all()
+
+        result = []
+        for claim in claims:
+            # Get farmer details
+            farmer = db.query(Farmer).filter(
+                Farmer.phone == claim.phone
+            ).first()
+
+            # Get farm profile
+            profile = db.query(FarmProfile).filter(
+                FarmProfile.phone == claim.phone
+            ).first()
+
+            result.append({
+                "id": f"CLM{claim.id:03d}",
+                "claim_id": claim.id,
+                "farmer": farmer.name if farmer else "Unknown",
+                "phone": claim.phone,
+                "district": farmer.district if farmer else "Unknown",
+                "crop": claim.crop_type,
+                "land_size": claim.land_size,
+                "risk": claim.risk_score,
+                "amount": f"₹{claim.compensation:,.2f}",
+                "status": claim.status,
+                "date": str(claim.created_at)[:10]
+            })
+
+        return { "claims": result }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ─────────────────────────────────────────
+# ROUTE 10 — Update Claim Status
+# ─────────────────────────────────────────
+@app.put("/claim/{claim_id}/status")
+def update_claim_status(
+    claim_id: int,
+    status: str,
+    db: Session = Depends(get_db)
+):
+    try:
+        claim = db.query(InsuranceClaim).filter(
+            InsuranceClaim.id == claim_id
+        ).first()
+
+        if not claim:
+            raise HTTPException(
+                status_code=404,
+                detail="Claim not found"
+            )
+
+        if status not in ["APPROVED", "REJECTED", "PENDING"]:
+            raise HTTPException(
+                status_code=400,
+                detail="Invalid status"
+            )
+
+        claim.status = status
+        db.commit()
+
+        return {
+            "message": f"Claim {claim_id} updated to {status}",
+            "claim_id": claim_id,
+            "status": status
         }
     except HTTPException:
         raise

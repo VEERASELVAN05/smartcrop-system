@@ -46,79 +46,95 @@ function Chatbot() {
   }, [messages]);
 
   const sendMessage = async (text) => {
-    if (!text.trim()) return;
+  if (!text.trim()) return;
 
-    const userMsg = {
-      role: 'user',
-      text: text,
+  const userMsg = {
+    role: 'user',
+    text: text,
+    time: new Date().toLocaleTimeString()
+  };
+  setMessages(prev => [...prev, userMsg]);
+  setInput('');
+  setLoading(true);
+
+  try {
+    const farmerContext = `You are SmartCrop AI Assistant helping Indian farmers.
+Farmer name: ${user.name}, District: ${user.district}.
+Respond in ${lang} language (use ${lang} script if not English).
+Keep response short, simple and farmer-friendly (2-3 sentences max).
+Help with: crop risk, weather advice, soil health, insurance claims, crop recommendations.
+Question: ${text}`;
+
+    // Try multiple Gemini model versions
+    const models = [
+      'gemini-2.0-flash-exp',
+      'gemini-1.5-flash',
+      'gemini-1.5-pro',
+      'gemini-pro'
+    ];
+
+    let botReply = null;
+
+    for (const modelName of models) {
+      try {
+        const response = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${GEMINI_API_KEY}`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              contents: [{
+                parts: [{ text: farmerContext }]
+              }],
+              generationConfig: {
+                temperature: 0.7,
+                maxOutputTokens: 200,
+              }
+            })
+          }
+        );
+        const data = await response.json();
+        console.log(`Tried ${modelName}:`, data);
+
+        if (data.candidates?.[0]?.content?.parts?.[0]?.text) {
+          botReply = data.candidates[0].content.parts[0].text;
+          console.log(`✅ ${modelName} worked!`);
+          break;
+        }
+      } catch (e) {
+        console.log(`${modelName} failed:`, e);
+        continue;
+      }
+    }
+
+    if (!botReply) {
+      // Fallback responses if API fails
+      const fallbacks = {
+        'Tamil': 'மன்னிக்கவும், இணைப்பு தோல்வியடைந்தது. மீண்டும் முயற்சிக்கவும்.',
+        'Hindi': 'क्षमा करें, कनेक्शन विफल हुआ। कृपया पुनः प्रयास करें।',
+        'English': 'Sorry, connection failed. Please try again.'
+      };
+      botReply = fallbacks[lang] || fallbacks['English'];
+    }
+
+    const botMsg = {
+      role: 'bot',
+      text: botReply,
       time: new Date().toLocaleTimeString()
     };
-    setMessages(prev => [...prev, userMsg]);
-    setInput('');
-    setLoading(true);
+    setMessages(prev => [...prev, botMsg]);
+    speakText(botReply);
 
-    try {
-      // Build context about farmer
-      const farmerContext = `
-        You are SmartCrop AI Assistant helping Indian farmers.
-        Farmer name: ${user.name}
-        District: ${user.district}
-        Language to respond in: ${lang}
-        
-        You help with:
-        - Crop failure risk questions
-        - Weather and irrigation advice
-        - Soil health guidance
-        - Insurance claim information
-        - Crop recommendations
-        
-        Keep responses short, simple and farmer-friendly.
-        If language is Tamil, respond in Tamil script.
-        If language is Hindi, respond in Hindi script.
-        Always be encouraging and helpful.
-        
-        Farmer's question: ${text}
-      `;
-
-      const response = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            contents: [{
-              parts: [{ text: farmerContext }]
-            }]
-          })
-        }
-      );
-
-      const data = await response.json();
-      console.log('Gemini response:', data);
-        const botReply = data.candidates?.[0]?.content
-        ?.parts?.[0]?.text ||
-        data.error?.message ||
-        'Sorry, I could not understand. Please try again.';
-
-      const botMsg = {
-        role: 'bot',
-        text: botReply,
-        time: new Date().toLocaleTimeString()
-      };
-      setMessages(prev => [...prev, botMsg]);
-
-      // Speak the response
-      speakText(botReply);
-
-    } catch (error) {
-      setMessages(prev => [...prev, {
-        role: 'bot',
-        text: 'Connection error. Please check internet.',
-        time: new Date().toLocaleTimeString()
-      }]);
-    }
-    setLoading(false);
-  };
+  } catch (error) {
+    console.error('Chat error:', error);
+    setMessages(prev => [...prev, {
+      role: 'bot',
+      text: 'Connection error. Please check internet.',
+      time: new Date().toLocaleTimeString()
+    }]);
+  }
+  setLoading(false);
+};
 
   const speakText = (text) => {
     if (!window.speechSynthesis) return;

@@ -4,7 +4,7 @@ from sqlalchemy.orm import sessionmaker
 from datetime import datetime
 
 # Update YOUR_PASSWORD with your PostgreSQL password
-DATABASE_URL = "postgresql://postgres:1313@localhost/smartcrop_db"
+DATABASE_URL = "postgresql://postgres:12345@localhost/smartcrop_db"
 
 engine = create_engine(DATABASE_URL)
 SessionLocal = sessionmaker(bind=engine)

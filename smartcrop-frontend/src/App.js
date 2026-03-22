@@ -7,6 +7,8 @@ import Dashboard from './pages/Dashboard';
 import Insurance from './pages/Insurance';
 import Chatbot from './pages/Chatbot';
 import GovernmentDashboard from './pages/GovernmentDashboard';
+import InsuranceDashboard from './pages/InsuranceDashboard';
+
 
 
 
@@ -34,6 +36,7 @@ function App() {
         <Route path="/insurance" element={<Insurance />} />
         <Route path="/chatbot" element={<Chatbot />} />
         <Route path="/government" element={<GovernmentDashboard />} />
+        <Route path="/insurance-company" element={<InsuranceDashboard />} />
       </Routes>
     </BrowserRouter>
   );

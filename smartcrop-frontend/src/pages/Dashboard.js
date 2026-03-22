@@ -8,6 +8,8 @@ import {
 import translations from '../translations';
 import cropRecommendation from '../cropRecommendation';
 import { getSoilValues } from '../soilData';
+import generateReport from '../generateReport';
+
 
 function Dashboard() {
   const navigate = useNavigate();
@@ -292,6 +294,19 @@ function Dashboard() {
           </button>
 
           <button
+  onClick={() => navigate('/insurance-company')}
+  style={{
+    backgroundColor: 'transparent',
+    border: '1px solid #9EC8B9',
+    color: '#9EC8B9', padding: '5px 10px',
+    borderRadius: '6px', cursor: 'pointer',
+    fontSize: '11px'
+  }}
+>
+  🏢 Insurance Co.
+</button>
+
+          <button
             onClick={handleChangeLanguage}
             style={{
               backgroundColor: 'transparent',
@@ -303,6 +318,30 @@ function Dashboard() {
           >
             🌐 {t.changeLanguage}
           </button>
+
+          <button
+  onClick={async () => {
+    try {
+      const res = await axios.get(
+        'http://127.0.0.1:8000/history',
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      generateReport(user, profile, res.data.history);
+    } catch {
+      generateReport(user, profile, []);
+    }
+  }}
+  style={{
+    backgroundColor: '#2C7A3F',
+    border: 'none', color: 'white',
+    padding: '5px 10px', borderRadius: '6px',
+    cursor: 'pointer', fontSize: '11px',
+    fontWeight: 'bold'
+  }}
+>
+  📄 Download Report
+</button>
+
           <button
             onClick={handleLogout}
             style={{
