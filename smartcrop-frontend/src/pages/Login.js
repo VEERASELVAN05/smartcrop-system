@@ -2,14 +2,16 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import translations from '../translations';
-import { getOptions } from '../optionTranslations';
+import { theme } from '../theme';
+import {
+  PrimaryButton, InputField,
+  ErrorAlert, Card
+} from '../components/UI';
 
 function Login() {
   const navigate = useNavigate();
   const lang = localStorage.getItem('language') || 'English';
-
   const t = translations[lang] || translations['English'];
-  const options = getOptions(lang);
 
   const [form, setForm] = useState({ phone: '', password: '' });
   const [error, setError] = useState('');
@@ -21,11 +23,9 @@ function Login() {
 
   const handleLogin = async () => {
     if (!form.phone || !form.password) {
-      setError(t.fillFields);
-      return;
+      setError(t.fillFields); return;
     }
-    setLoading(true);
-    setError('');
+    setLoading(true); setError('');
     try {
       const res = await axios.post(
         'http://127.0.0.1:8000/login', form
@@ -43,143 +43,184 @@ function Login() {
 
   return (
     <div style={{
-      minHeight: '100vh', backgroundColor: '#F5F7FA',
-      display: 'flex', alignItems: 'center',
-      justifyContent: 'center', fontFamily: 'Arial'
+      minHeight: '100vh',
+      background: `linear-gradient(135deg, 
+        ${theme.colors.primary} 0%, 
+        #0f2744 100%)`,
+      display: 'flex', fontFamily: "'Segoe UI', sans-serif",
+      position: 'relative', overflow: 'hidden'
     }}>
+
+      {/* Left panel */}
       <div style={{
-        backgroundColor: 'white', borderRadius: '16px',
-        padding: '40px', width: '400px',
-        boxShadow: '0 4px 20px rgba(0,0,0,0.1)'
+        flex: 1, display: 'flex', flexDirection: 'column',
+        justifyContent: 'center', padding: '60px',
+        color: 'white',
       }}>
-
-        {/* Language indicator */}
-        <div style={{
-          textAlign: 'right', marginBottom: '10px'
-        }}>
-          <span style={{
-            backgroundColor: '#ECFDF5',
-            color: '#065F46', padding: '4px 10px',
-            borderRadius: '20px', fontSize: '12px',
-            fontWeight: 'bold'
+        <div style={{ animation: 'slideIn 0.5s ease' }}>
+          <div style={{ fontSize: '48px', marginBottom: '16px' }}>
+            🌾
+          </div>
+          <h1 style={{
+            fontSize: '42px', fontWeight: '800',
+            marginBottom: '12px', lineHeight: 1.1
           }}>
-            🌐 {lang}
-          </span>
-        </div>
-
-        {/* Header */}
-        <div style={{ textAlign: 'center', marginBottom: '30px' }}>
-          <div style={{ fontSize: '48px' }}>🌾</div>
-          <h1 style={{ color: '#1B2A4A', margin: '10px 0 5px' }}>
             SmartCrop
           </h1>
-          <p style={{ color: '#6B7280', margin: 0, fontSize: '14px' }}>
-            {t.loginSub}
+          <p style={{
+            fontSize: '18px', opacity: 0.7,
+            marginBottom: '40px', lineHeight: 1.6
+          }}>
+            AI-Powered Crop Failure Prediction &
+            Micro-Insurance Automation
           </p>
-        </div>
 
-        {/* Error */}
-        {error && (
-          <div style={{
-            backgroundColor: '#FEE2E2',
-            border: '1px solid #FECACA',
-            borderRadius: '8px', padding: '10px',
-            marginBottom: '15px', color: '#DC2626',
-            fontSize: '14px'
-          }}>
-            ⚠️ {error}
+          {[
+            { icon: '🧠', text: '99.95% ML Model Accuracy' },
+            { icon: '🌍', text: '6 Regional Languages' },
+            { icon: '🛡️', text: 'Auto Insurance Claims' },
+            { icon: '🌤️', text: 'Real-time Weather Data' },
+          ].map((f, i) => (
+            <div key={i} style={{
+              display: 'flex', alignItems: 'center',
+              gap: '12px', marginBottom: '14px',
+              animation: `fadeIn 0.4s ease ${i * 0.1}s both`
+            }}>
+              <div style={{
+                width: '36px', height: '36px',
+                backgroundColor: 'rgba(255,255,255,0.1)',
+                borderRadius: '10px',
+                display: 'flex', alignItems: 'center',
+                justifyContent: 'center', fontSize: '18px'
+              }}>
+                {f.icon}
+              </div>
+              <span style={{ fontSize: '15px', opacity: 0.85 }}>
+                {f.text}
+              </span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Right panel */}
+      <div style={{
+        width: '420px', backgroundColor: 'white',
+        display: 'flex', flexDirection: 'column',
+        justifyContent: 'center', padding: '48px 40px',
+        boxShadow: '-20px 0 60px rgba(0,0,0,0.2)',
+        animation: 'slideIn 0.4s ease'
+      }}>
+
+        {/* Language badge */}
+        <div style={{
+          display: 'flex', justifyContent: 'space-between',
+          alignItems: 'center', marginBottom: '32px'
+        }}>
+          <div>
+            <h2 style={{
+              fontSize: '24px', fontWeight: '800',
+              color: theme.colors.textPrimary, marginBottom: '4px'
+            }}>
+              {t.loginTitle || 'Welcome Back'}
+            </h2>
+            <p style={{
+              color: theme.colors.textMuted, fontSize: '13px'
+            }}>
+              {t.loginSub}
+            </p>
           </div>
-        )}
-
-        {/* Phone */}
-        <div style={{ marginBottom: '15px' }}>
-          <label style={{
-            display: 'block', marginBottom: '6px',
-            fontWeight: 'bold', color: '#374151',
-            fontSize: '14px'
-          }}>
-            📱 {t.phone}
-          </label>
-          <input
-            type="text" name="phone"
-            value={form.phone} onChange={handleChange}
-            placeholder={t.phonePlaceholder}
-            style={{
-              width: '100%', padding: '12px',
-              borderRadius: '8px',
-              border: '1px solid #D1D5DB',
-              fontSize: '14px', boxSizing: 'border-box'
+          <button
+            onClick={() => {
+              localStorage.removeItem('language');
+              navigate('/');
             }}
-          />
+            style={{
+              backgroundColor: '#f0f4f8',
+              border: 'none', borderRadius: '20px',
+              padding: '6px 12px', cursor: 'pointer',
+              fontSize: '12px', color: theme.colors.textSecondary,
+              fontWeight: '600'
+            }}
+          >
+            🌐 {lang}
+          </button>
         </div>
 
-        {/* Password */}
-        <div style={{ marginBottom: '25px' }}>
-          <label style={{
-            display: 'block', marginBottom: '6px',
-            fontWeight: 'bold', color: '#374151',
-            fontSize: '14px'
-          }}>
-            🔒 {t.password}
-          </label>
-          <input
-            type="password" name="password"
-            value={form.password} onChange={handleChange}
-            placeholder={t.passwordPlaceholder}
-            style={{
-              width: '100%', padding: '12px',
-              borderRadius: '8px',
-              border: '1px solid #D1D5DB',
-              fontSize: '14px', boxSizing: 'border-box'
-            }}
-          />
+        <ErrorAlert message={error} />
+
+        <InputField
+          label={t.phone}
+          name="phone"
+          value={form.phone}
+          onChange={handleChange}
+          placeholder={t.phonePlaceholder}
+          icon="📱"
+        />
+
+        <InputField
+          label={t.password}
+          name="password"
+          type="password"
+          value={form.password}
+          onChange={handleChange}
+          placeholder={t.passwordPlaceholder}
+          icon="🔒"
+        />
+
+        <div style={{ marginTop: '8px' }}>
+          <PrimaryButton
+            onClick={handleLogin}
+            loading={loading}
+            color={theme.colors.primary}
+          >
+            🔐 {t.loginButton}
+          </PrimaryButton>
         </div>
 
-        {/* Login Button */}
-        <button
-          onClick={handleLogin}
-          style={{
-            width: '100%', padding: '14px',
-            backgroundColor: '#1B2A4A',
-            color: 'white', border: 'none',
-            borderRadius: '8px', fontSize: '16px',
-            fontWeight: 'bold', cursor: 'pointer'
-          }}
-        >
-          {loading ? t.loginLoading : `🔐 ${t.loginButton}`}
-        </button>
-
-        {/* Register Link */}
         <p style={{
           textAlign: 'center', marginTop: '20px',
-          color: '#6B7280', fontSize: '14px'
+          color: theme.colors.textMuted, fontSize: '14px'
         }}>
           {t.noAccount}{' '}
           <span
             onClick={() => navigate('/register')}
             style={{
-              color: '#2C7A3F', fontWeight: 'bold',
-              cursor: 'pointer'
+              color: theme.colors.secondary,
+              fontWeight: '700', cursor: 'pointer',
+              textDecoration: 'underline'
             }}
           >
             {t.createAccount}
           </span>
         </p>
 
-        {/* Change Language */}
-        <p style={{ textAlign: 'center', marginTop: '8px' }}>
+        <p style={{
+          textAlign: 'center', marginTop: '8px',
+          fontSize: '12px'
+        }}>
           <span
             onClick={() => {
               localStorage.removeItem('language');
               navigate('/');
             }}
             style={{
-              color: '#9CA3AF', fontSize: '12px',
+              color: theme.colors.textMuted,
               cursor: 'pointer', textDecoration: 'underline'
             }}
           >
             🌐 {t.changeLanguage}
           </span>
+        </p>
+
+        <p style={{
+          textAlign: 'center', marginTop: '32px',
+          color: theme.colors.textMuted, fontSize: '11px',
+          borderTop: `1px solid ${theme.colors.border}`,
+          paddingTop: '20px'
+        }}>
+          Sri Krishna College of Technology
+          <br />SmartCrop v2.0 • CSE Department
         </p>
       </div>
     </div>
