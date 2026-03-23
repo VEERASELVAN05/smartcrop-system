@@ -4,26 +4,42 @@ import axios from "axios";
 import translations from "../translations";
 import { getOptions } from "../optionTranslations";
 import optionTranslations from "../optionTranslations";
+import { theme } from "../theme";
+import {
+  PrimaryButton,
+  InputField,
+  SelectField,
+  ErrorAlert,
+} from "../components/UI";
+import useTranslation from "../useTranslation";
 
-const DISTRICTS = [
-  "Coimbatore",
-  "Chennai",
-  "Madurai",
-  "Thanjavur",
-  "Salem",
-  "Tirunelveli",
-  "Trichy",
-  "Erode",
-  "Tiruppur",
-  "Vellore",
-  "Dindigul",
-  "Kanchipuram",
-];
+const DEFAULT = {
+  registerTitle: "Create Account",
+  registerSub: "Join SmartCrop — protect your harvest",
+  fullName: "Full Name",
+  phone: "Phone Number",
+  password: "Password",
+  district: "District",
+  phonePlaceholder: "Enter your phone number",
+  passwordPlaceholder: "Enter your password",
+  namePlaceholder: "e.g. Ravi Kumar",
+  selectDistrict: "Select your district",
+  createButton: "Create Account",
+  createLoading: "Creating account...",
+  alreadyAccount: "Already have an account?",
+  loginHere: "Login here",
+  phoneTenDigits: "Phone must be 10 digits",
+  fillFields: "Please fill all fields",
+  changeLanguage: "Change Language",
+};
 
 function Register() {
   const navigate = useNavigate();
-  const lang = localStorage.getItem("language") || "English";
-  const t = translations[lang];
+  const {
+    texts: t,
+    loading: translating,
+    lang,
+  } = useTranslation(DEFAULT, "register");
   const options = getOptions(lang);
 
   const [form, setForm] = useState({
@@ -61,192 +77,293 @@ function Register() {
     setLoading(false);
   };
 
-  const inputStyle = {
-    width: "100%",
-    padding: "12px",
-    borderRadius: "8px",
-    border: "1px solid #D1D5DB",
-    fontSize: "14px",
-    boxSizing: "border-box",
-    marginTop: "6px",
-  };
-
+  if (translating) {
+  return (
+    <div style={{
+      minHeight: '100vh',
+      background: `linear-gradient(135deg,
+        ${theme.colors.primary} 0%, #0f2744 100%)`,
+      display: 'flex', alignItems: 'center',
+      justifyContent: 'center'
+    }}>
+      <div style={{ textAlign: 'center', color: 'white' }}>
+        <div style={{ fontSize: '48px' }}>🌾</div>
+        <div style={{
+          width: '36px', height: '36px',
+          border: '3px solid rgba(255,255,255,0.3)',
+          borderTop: '3px solid white',
+          borderRadius: '50%',
+          animation: 'spin 0.8s linear infinite',
+          margin: '16px auto'
+        }} />
+        <p style={{ opacity: 0.7 }}>Loading {lang}...</p>
+      </div>
+    </div>
+  );
+}
   return (
     <div
       style={{
         minHeight: "100vh",
-        backgroundColor: "#F5F7FA",
+        background: `linear-gradient(135deg, 
+        ${theme.colors.primary} 0%, 
+        #0f2744 100%)`,
         display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        fontFamily: "Arial",
+        fontFamily: "'Segoe UI', sans-serif",
+        overflow: "hidden",
       }}
     >
+      {/* Left panel */}
       <div
         style={{
+          flex: 1,
+          display: "flex",
+          flexDirection: "column",
+          justifyContent: "center",
+          padding: "60px",
+          color: "white",
+        }}
+      >
+        <div style={{ animation: "slideIn 0.5s ease" }}>
+          <div style={{ fontSize: "48px", marginBottom: "16px" }}>👨‍🌾</div>
+          <h1
+            style={{
+              fontSize: "38px",
+              fontWeight: "800",
+              marginBottom: "12px",
+              lineHeight: 1.1,
+            }}
+          >
+            Join SmartCrop
+          </h1>
+          <p
+            style={{
+              fontSize: "16px",
+              opacity: 0.7,
+              marginBottom: "40px",
+              lineHeight: 1.6,
+            }}
+          >
+            Protect your harvest with AI-powered crop failure prediction
+          </p>
+
+          {[
+            { icon: "🆓", text: "Completely Free to Use" },
+            { icon: "📱", text: "Works in Your Language" },
+            { icon: "⚡", text: "Instant Risk Assessment" },
+            { icon: "🛡️", text: "Auto Insurance Claims" },
+          ].map((f, i) => (
+            <div
+              key={i}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "12px",
+                marginBottom: "14px",
+                animation: `fadeIn 0.4s ease ${i * 0.1}s both`,
+              }}
+            >
+              <div
+                style={{
+                  width: "36px",
+                  height: "36px",
+                  backgroundColor: "rgba(255,255,255,0.1)",
+                  borderRadius: "10px",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontSize: "18px",
+                }}
+              >
+                {f.icon}
+              </div>
+              <span
+                style={{
+                  fontSize: "15px",
+                  opacity: 0.85,
+                }}
+              >
+                {f.text}
+              </span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Right panel */}
+      <div
+        style={{
+          width: "440px",
           backgroundColor: "white",
-          borderRadius: "16px",
-          padding: "40px",
-          width: "420px",
-          boxShadow: "0 4px 20px rgba(0,0,0,0.1)",
+          display: "flex",
+          flexDirection: "column",
+          justifyContent: "center",
+          padding: "48px 40px",
+          boxShadow: "-20px 0 60px rgba(0,0,0,0.2)",
+          overflowY: "auto",
+          animation: "slideIn 0.4s ease",
         }}
       >
         {/* Header */}
-        <div style={{ textAlign: "center", marginBottom: "25px" }}>
-          <div style={{ fontSize: "48px" }}>👨‍🌾</div>
-          <h1 style={{ color: "#1B2A4A", margin: "10px 0 5px" }}>
-            {t.registerTitle}
-          </h1>
-          <p style={{ color: "#6B7280", margin: 0, fontSize: "14px" }}>
-            {t.registerSub}
-          </p>
-        </div>
-
-        {/* Error */}
-        {error && (
-          <div
-            style={{
-              backgroundColor: "#FEE2E2",
-              border: "1px solid #FECACA",
-              borderRadius: "8px",
-              padding: "10px",
-              marginBottom: "15px",
-              color: "#DC2626",
-              fontSize: "14px",
-            }}
-          >
-            ⚠️ {error}
-          </div>
-        )}
-
-        {/* Full Name */}
-        <div style={{ marginBottom: "15px" }}>
-          <label
-            style={{ fontWeight: "bold", color: "#374151", fontSize: "14px" }}
-          >
-            👤 {t.fullName}
-          </label>
-          <input
-            type="text"
-            name="name"
-            value={form.name}
-            onChange={handleChange}
-            placeholder={t.namePlaceholder}
-            style={inputStyle}
-          />
-        </div>
-
-        {/* Phone */}
-        <div style={{ marginBottom: "15px" }}>
-          <label
-            style={{ fontWeight: "bold", color: "#374151", fontSize: "14px" }}
-          >
-            📱 {t.phone}
-          </label>
-          <input
-            type="text"
-            name="phone"
-            value={form.phone}
-            onChange={handleChange}
-            placeholder={t.phonePlaceholder}
-            style={inputStyle}
-          />
-        </div>
-
-        {/* Password */}
-        <div style={{ marginBottom: "15px" }}>
-          <label
-            style={{ fontWeight: "bold", color: "#374151", fontSize: "14px" }}
-          >
-            🔒 {t.password}
-          </label>
-          <input
-            type="password"
-            name="password"
-            value={form.password}
-            onChange={handleChange}
-            placeholder={t.passwordPlaceholder}
-            style={inputStyle}
-          />
-        </div>
-
-        {/* District */}
-        <div style={{ marginBottom: "25px" }}>
-          <label
-            style={{ fontWeight: "bold", color: "#374151", fontSize: "14px" }}
-          >
-            📍 {t.district}
-          </label>
-          <select
-            name="district"
-            value={form.district}
-            onChange={handleChange}
-            style={{ ...inputStyle, backgroundColor: "white" }}
-          >
-            <option value="">{t.selectDistrict}</option>
-            {options.districts.map((d, i) => (
-              <option
-                key={optionTranslations["English"].districts[i]}
-                value={optionTranslations["English"].districts[i]}
-              >
-                {d}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        {/* Register Button */}
-        <button
-          onClick={handleRegister}
+        <div
           style={{
-            width: "100%",
-            padding: "14px",
-            backgroundColor: "#2C7A3F",
-            color: "white",
-            border: "none",
-            borderRadius: "8px",
-            fontSize: "16px",
-            fontWeight: "bold",
-            cursor: "pointer",
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            marginBottom: "28px",
           }}
         >
-          {loading ? t.createLoading : `✅ ${t.createButton}`}
-        </button>
+          <div>
+            <h2
+              style={{
+                fontSize: "24px",
+                fontWeight: "800",
+                color: theme.colors.textPrimary,
+                marginBottom: "4px",
+              }}
+            >
+              {t.registerTitle}
+            </h2>
+            <p
+              style={{
+                color: theme.colors.textMuted,
+                fontSize: "13px",
+              }}
+            >
+              {t.registerSub}
+            </p>
+          </div>
+          <button
+            onClick={() => {
+              localStorage.removeItem("language");
+              navigate("/");
+            }}
+            style={{
+              backgroundColor: "#f0f4f8",
+              border: "none",
+              borderRadius: "20px",
+              padding: "6px 12px",
+              cursor: "pointer",
+              fontSize: "12px",
+              color: theme.colors.textSecondary,
+              fontWeight: "600",
+              whiteSpace: "nowrap",
+            }}
+          >
+            🌐 {lang}
+          </button>
+        </div>
 
-        {/* Login Link */}
+        <ErrorAlert message={error} />
+
+        <InputField
+          label={t.fullName}
+          name="name"
+          value={form.name}
+          onChange={handleChange}
+          placeholder={t.namePlaceholder}
+          icon="👤"
+        />
+
+        <InputField
+          label={t.phone}
+          name="phone"
+          value={form.phone}
+          onChange={handleChange}
+          placeholder={t.phonePlaceholder}
+          icon="📱"
+        />
+
+        <InputField
+          label={t.password}
+          name="password"
+          type="password"
+          value={form.password}
+          onChange={handleChange}
+          placeholder={t.passwordPlaceholder}
+          icon="🔒"
+        />
+
+        <SelectField
+          label={t.district}
+          name="district"
+          value={form.district}
+          onChange={handleChange}
+          placeholder={t.selectDistrict}
+          icon="📍"
+          options={options.districts.map((d, i) => ({
+            label: d,
+            value: optionTranslations["English"].districts[i],
+          }))}
+        />
+
+        <div style={{ marginTop: "8px" }}>
+          <PrimaryButton
+            onClick={handleRegister}
+            loading={loading}
+            color={theme.colors.secondary}
+          >
+            ✅ {t.createButton}
+          </PrimaryButton>
+        </div>
+
         <p
           style={{
             textAlign: "center",
             marginTop: "20px",
-            color: "#6B7280",
+            color: theme.colors.textMuted,
             fontSize: "14px",
           }}
         >
           {t.alreadyAccount}{" "}
           <span
             onClick={() => navigate("/login")}
-            style={{ color: "#1B2A4A", fontWeight: "bold", cursor: "pointer" }}
+            style={{
+              color: theme.colors.primary,
+              fontWeight: "700",
+              cursor: "pointer",
+              textDecoration: "underline",
+            }}
           >
             {t.loginHere}
           </span>
         </p>
 
-        {/* Change Language */}
-        <p style={{ textAlign: "center", marginTop: "8px" }}>
+        <p
+          style={{
+            textAlign: "center",
+            marginTop: "8px",
+            fontSize: "12px",
+          }}
+        >
           <span
             onClick={() => {
               localStorage.removeItem("language");
               navigate("/");
             }}
             style={{
-              color: "#9CA3AF",
-              fontSize: "12px",
+              color: theme.colors.textMuted,
               cursor: "pointer",
               textDecoration: "underline",
             }}
           >
             🌐 {t.changeLanguage}
           </span>
+        </p>
+
+        <p
+          style={{
+            textAlign: "center",
+            marginTop: "24px",
+            color: theme.colors.textMuted,
+            fontSize: "11px",
+            borderTop: `1px solid ${theme.colors.border}`,
+            paddingTop: "20px",
+          }}
+        >
+          Sri Krishna College of Technology
+          <br />
+          SmartCrop v2.0 • CSE Department
         </p>
       </div>
     </div>

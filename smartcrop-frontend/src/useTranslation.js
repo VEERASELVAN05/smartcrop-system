@@ -1,37 +1,52 @@
 import { useState, useEffect } from 'react';
-import { translateBatch } from './translateService';
+import { translateObject } from './translateService';
 
-const useTranslation = (defaultTexts) => {
-  const [texts, setTexts] = useState(defaultTexts);
-  const [loading, setLoading] = useState(false);
+const useTranslation = (defaultTexts, pageName) => {
   const lang = localStorage.getItem('language') || 'English';
+  const cacheKey = `page_${pageName}_${lang}`;
+
+  // Check if full page translation cached
+  const getCached = () => {
+    try {
+      const cached = localStorage.getItem(cacheKey);
+      return cached ? JSON.parse(cached) : null;
+    } catch { return null; }
+  };
+
+  const [texts, setTexts] = useState(
+    getCached() || defaultTexts
+  );
+  const [loading, setLoading] = useState(
+    lang !== 'English' && !getCached()
+  );
 
   useEffect(() => {
     if (lang === 'English') {
       setTexts(defaultTexts);
+      setLoading(false);
       return;
     }
 
-    // Check if translation cached in localStorage
-    const cacheKey = `translations_${lang}_${Object.keys(defaultTexts).join('_')}`;
-    const cached = localStorage.getItem(cacheKey);
-
+    // Use cache if available
+    const cached = getCached();
     if (cached) {
-      setTexts(JSON.parse(cached));
+      setTexts(cached);
+      setLoading(false);
       return;
     }
 
-    // Translate
+    // Translate all texts
     setLoading(true);
-    translateBatch(defaultTexts, lang).then(translated => {
+    translateObject(defaultTexts, lang).then(translated => {
       setTexts(translated);
-      // Cache for 24 hours
-      localStorage.setItem(cacheKey, JSON.stringify(translated));
+      localStorage.setItem(
+        cacheKey, JSON.stringify(translated)
+      );
       setLoading(false);
     });
   }, [lang]);
 
-  return { texts, loading };
+  return { texts, loading, lang };
 };
 
 export default useTranslation;

@@ -1,7 +1,11 @@
-// LibreTranslate - Free and Open Source Translation API
-const LIBRE_TRANSLATE_URL = 'https://libretranslate.com/translate';
+// Multiple free LibreTranslate servers for fallback
+const SERVERS = [
+  'https://libretranslate.com/translate',
+  'https://translate.argosopentech.com/translate',
+  'https://libretranslate.de/translate',
+];
 
-const languageCodes = {
+const LANG_CODES = {
   'English':   'en',
   'Tamil':     'ta',
   'Telugu':    'te',
@@ -10,64 +14,58 @@ const languageCodes = {
   'Hindi':     'hi',
 };
 
-// Cache translations to avoid repeated API calls
-const translationCache = {};
+// Try each server until one works
+export const translateText = async (text, targetLang) => {
+  if (targetLang === 'English' || !text) return text;
+  const target = LANG_CODES[targetLang];
+  if (!target) return text;
 
-export const translateText = async (text, targetLanguage) => {
-  // If English selected return original text
-  if (targetLanguage === 'English') return text;
+  // Check localStorage cache first
+  const cacheKey = `tr_${targetLang}_${btoa(
+    unescape(encodeURIComponent(text))
+  ).slice(0, 20)}`;
+  const cached = localStorage.getItem(cacheKey);
+  if (cached) return cached;
 
-  const targetCode = languageCodes[targetLanguage];
-  if (!targetCode) return text;
-
-  // Check cache first
-  const cacheKey = `${text}_${targetCode}`;
-  if (translationCache[cacheKey]) {
-    return translationCache[cacheKey];
+  for (const server of SERVERS) {
+    try {
+      const res = await fetch(server, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          q: text,
+          source: 'en',
+          target,
+          format: 'text'
+        }),
+        signal: AbortSignal.timeout(5000)
+      });
+      const data = await res.json();
+      if (data.translatedText) {
+        localStorage.setItem(cacheKey, data.translatedText);
+        return data.translatedText;
+      }
+    } catch { continue; }
   }
-
-  try {
-    const response = await fetch(LIBRE_TRANSLATE_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        q: text,
-        source: 'en',
-        target: targetCode,
-        format: 'text'
-      })
-    });
-
-    const data = await response.json();
-    const translated = data.translatedText || text;
-
-    // Save to cache
-    translationCache[cacheKey] = translated;
-    return translated;
-
-  } catch (error) {
-    console.log('Translation failed, using English:', error);
-    return text;
-  }
+  return text; // fallback to English
 };
 
-// Translate multiple texts at once
-export const translateBatch = async (textsObject, targetLanguage) => {
-  if (targetLanguage === 'English') return textsObject;
+// Translate entire object at once
+export const translateObject = async (obj, targetLang) => {
+  if (targetLang === 'English') return obj;
 
-  const keys = Object.keys(textsObject);
-  const translated = { ...textsObject };
+  const keys = Object.keys(obj);
+  const values = Object.values(obj);
 
-  // Translate all values
-  await Promise.all(
-    keys.map(async (key) => {
-      if (typeof textsObject[key] === 'string') {
-        translated[key] = await translateText(
-          textsObject[key], targetLanguage
-        );
-      }
-    })
+  const translated = await Promise.all(
+    values.map(v =>
+      typeof v === 'string'
+        ? translateText(v, targetLang)
+        : Promise.resolve(v)
+    )
   );
 
-  return translated;
+  return Object.fromEntries(
+    keys.map((k, i) => [k, translated[i]])
+  );
 };

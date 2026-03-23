@@ -1,19 +1,35 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import translations from '../translations';
+import useTranslation from '../useTranslation';
 import { theme } from '../theme';
-import {
-  PrimaryButton, InputField,
-  ErrorAlert, Card
-} from '../components/UI';
+import { PrimaryButton, InputField, ErrorAlert } from '../components/UI';
+
+// Default English texts — auto translated
+const DEFAULT = {
+  loginTitle: 'Welcome Back',
+  loginSub: 'Sign in to your SmartCrop account',
+  phone: 'Phone Number',
+  password: 'Password',
+  phonePlaceholder: 'Enter your phone number',
+  passwordPlaceholder: 'Enter your password',
+  loginButton: 'Login',
+  loginLoading: 'Signing in...',
+  noAccount: 'New farmer?',
+  createAccount: 'Create Account',
+  invalidLogin: 'Invalid phone number or password',
+  fillFields: 'Please fill in all fields',
+  changeLanguage: 'Change Language',
+};
 
 function Login() {
   const navigate = useNavigate();
-  const lang = localStorage.getItem('language') || 'English';
-  const t = translations[lang] || translations['English'];
+  const { texts: t, loading: translating, lang } =
+    useTranslation(DEFAULT, 'login');
 
-  const [form, setForm] = useState({ phone: '', password: '' });
+  const [form, setForm] = useState({
+    phone: '', password: ''
+  });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -41,21 +57,53 @@ function Login() {
     setLoading(false);
   };
 
+  // Loading screen while translating
+  if (translating) {
+    return (
+      <div style={{
+        minHeight: '100vh',
+        background: `linear-gradient(135deg,
+          ${theme.colors.primary} 0%, #0f2744 100%)`,
+        display: 'flex', alignItems: 'center',
+        justifyContent: 'center',
+        fontFamily: "'Segoe UI', sans-serif"
+      }}>
+        <div style={{ textAlign: 'center', color: 'white' }}>
+          <div style={{ fontSize: '48px', marginBottom: '16px' }}>
+            🌾
+          </div>
+          <div style={{
+            width: '36px', height: '36px',
+            border: '3px solid rgba(255,255,255,0.3)',
+            borderTop: '3px solid white',
+            borderRadius: '50%',
+            animation: 'spin 0.8s linear infinite',
+            margin: '0 auto 12px'
+          }} />
+          <p style={{ opacity: 0.7, fontSize: '14px' }}>
+            Loading {lang}...
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div style={{
       minHeight: '100vh',
-      background: `linear-gradient(135deg, 
-        ${theme.colors.primary} 0%, 
-        #0f2744 100%)`,
-      display: 'flex', fontFamily: "'Segoe UI', sans-serif",
-      position: 'relative', overflow: 'hidden'
+      background: `linear-gradient(135deg,
+        ${theme.colors.primary} 0%, #0f2744 100%)`,
+      display: 'flex',
+      fontFamily: "'Segoe UI', sans-serif",
+      overflow: 'hidden'
     }}>
 
       {/* Left panel */}
       <div style={{
-        flex: 1, display: 'flex', flexDirection: 'column',
-        justifyContent: 'center', padding: '60px',
-        color: 'white',
+        flex: 1, display: 'flex',
+        flexDirection: 'column',
+        justifyContent: 'center',
+        padding: '60px', color: 'white',
       }}>
         <div style={{ animation: 'slideIn 0.5s ease' }}>
           <div style={{ fontSize: '48px', marginBottom: '16px' }}>
@@ -74,12 +122,11 @@ function Login() {
             AI-Powered Crop Failure Prediction &
             Micro-Insurance Automation
           </p>
-
           {[
-            { icon: '🧠', text: '99.95% ML Model Accuracy' },
+            { icon: '🧠', text: '99.95% ML Accuracy' },
             { icon: '🌍', text: '6 Regional Languages' },
             { icon: '🛡️', text: 'Auto Insurance Claims' },
-            { icon: '🌤️', text: 'Real-time Weather Data' },
+            { icon: '🌤️', text: 'Real-time Weather' },
           ].map((f, i) => (
             <div key={i} style={{
               display: 'flex', alignItems: 'center',
@@ -111,8 +158,6 @@ function Login() {
         boxShadow: '-20px 0 60px rgba(0,0,0,0.2)',
         animation: 'slideIn 0.4s ease'
       }}>
-
-        {/* Language badge */}
         <div style={{
           display: 'flex', justifyContent: 'space-between',
           alignItems: 'center', marginBottom: '32px'
@@ -120,9 +165,10 @@ function Login() {
           <div>
             <h2 style={{
               fontSize: '24px', fontWeight: '800',
-              color: theme.colors.textPrimary, marginBottom: '4px'
+              color: theme.colors.textPrimary,
+              marginBottom: '4px'
             }}>
-              {t.loginTitle || 'Welcome Back'}
+              {t.loginTitle}
             </h2>
             <p style={{
               color: theme.colors.textMuted, fontSize: '13px'
@@ -133,13 +179,13 @@ function Login() {
           <button
             onClick={() => {
               localStorage.removeItem('language');
-              navigate('/');
+              navigate('/language');
             }}
             style={{
-              backgroundColor: '#f0f4f8',
-              border: 'none', borderRadius: '20px',
-              padding: '6px 12px', cursor: 'pointer',
-              fontSize: '12px', color: theme.colors.textSecondary,
+              backgroundColor: '#f0f4f8', border: 'none',
+              borderRadius: '20px', padding: '6px 12px',
+              cursor: 'pointer', fontSize: '12px',
+              color: theme.colors.textSecondary,
               fontWeight: '600'
             }}
           >
@@ -202,7 +248,7 @@ function Login() {
           <span
             onClick={() => {
               localStorage.removeItem('language');
-              navigate('/');
+              navigate('/language');
             }}
             style={{
               color: theme.colors.textMuted,

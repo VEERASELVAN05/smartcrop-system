@@ -20,11 +20,8 @@ function App() {
     <BrowserRouter>
       <Routes>
         {/* First screen — language selection */}
-        <Route path="/" element={
-          !language ? <LanguageSelect /> :
-          token ? <Navigate to="/dashboard" /> :
-          <Navigate to="/login" />
-        } />
+        <Route path="/" element={<Navigate to="/language" />} />
+        <Route path="/language" element={<LanguageSelect />} />
         <Route path="/language" element={<LanguageSelect />} />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
