@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import {
@@ -10,8 +10,7 @@ import { getSoilValues } from '../soilData';
 import cropRecommendation from '../cropRecommendation';
 import { theme } from '../theme';
 import {
-  PrimaryButton, StatCard,
-  Navbar, NavButton, Spinner, Badge
+  PrimaryButton, Navbar, NavButton, Badge
 } from '../components/UI';
 
 function Dashboard() {
@@ -34,6 +33,7 @@ function Dashboard() {
   const [activeTab, setActiveTab] = useState('predict');
   const [pageLoading, setPageLoading] = useState(true);
   const [showUserMenu, setShowUserMenu] = useState(false);
+  const [autoPrediected, setAutoPredicted] = useState(false);
 
   const user = JSON.parse(
     localStorage.getItem('user') || '{}'
@@ -41,18 +41,44 @@ function Dashboard() {
   const token = localStorage.getItem('token');
 
   const districtCoords = {
-    'Coimbatore':  { lat: 11.0168, lon: 76.9558 },
-    'Chennai':     { lat: 13.0827, lon: 80.2707 },
-    'Madurai':     { lat: 9.9252,  lon: 78.1198 },
-    'Thanjavur':   { lat: 10.7870, lon: 79.1378 },
-    'Salem':       { lat: 11.6643, lon: 78.1460 },
-    'Tirunelveli': { lat: 8.7139,  lon: 77.7567 },
-    'Trichy':      { lat: 10.7905, lon: 78.7047 },
-    'Erode':       { lat: 11.3410, lon: 77.7172 },
-    'Tiruppur':    { lat: 11.1085, lon: 77.3411 },
-    'Vellore':     { lat: 12.9165, lon: 79.1325 },
-    'Dindigul':    { lat: 10.3673, lon: 77.9803 },
-    'Kanchipuram': { lat: 12.8185, lon: 79.6947 },
+    'Coimbatore':      { lat: 11.0168, lon: 76.9558 },
+    'Chennai':         { lat: 13.0827, lon: 80.2707 },
+    'Madurai':         { lat: 9.9252,  lon: 78.1198 },
+    'Thanjavur':       { lat: 10.7870, lon: 79.1378 },
+    'Salem':           { lat: 11.6643, lon: 78.1460 },
+    'Tirunelveli':     { lat: 8.7139,  lon: 77.7567 },
+    'Trichy':          { lat: 10.7905, lon: 78.7047 },
+    'Erode':           { lat: 11.3410, lon: 77.7172 },
+    'Tiruppur':        { lat: 11.1085, lon: 77.3411 },
+    'Vellore':         { lat: 12.9165, lon: 79.1325 },
+    'Dindigul':        { lat: 10.3673, lon: 77.9803 },
+    'Kanchipuram':     { lat: 12.8185, lon: 79.6947 },
+    'Dharmapuri':      { lat: 12.1211, lon: 78.1582 },
+    'Krishnagiri':     { lat: 12.5266, lon: 78.2134 },
+    'Namakkal':        { lat: 11.2189, lon: 78.1674 },
+    'Karur':           { lat: 10.9601, lon: 78.0766 },
+    'Perambalur':      { lat: 11.2342, lon: 78.8821 },
+    'Ariyalur':        { lat: 11.1404, lon: 79.0762 },
+    'Cuddalore':       { lat: 11.7480, lon: 79.7714 },
+    'Villupuram':      { lat: 11.9401, lon: 79.4861 },
+    'Kallakurichi':    { lat: 11.7384, lon: 78.9583 },
+    'Tiruvannamalai':  { lat: 12.2253, lon: 79.0747 },
+    'Ranipet':         { lat: 12.9225, lon: 79.3325 },
+    'Tirupathur':      { lat: 12.4961, lon: 78.5641 },
+    'Tiruvallur':      { lat: 13.1437, lon: 79.9088 },
+    'Chengalpattu':    { lat: 12.6921, lon: 79.9756 },
+    'Kancheepuram':    { lat: 12.8185, lon: 79.6947 },
+    'Nagapattinam':    { lat: 10.7672, lon: 79.8449 },
+    'Mayiladuthurai':  { lat: 11.1015, lon: 79.6519 },
+    'Tiruvarur':       { lat: 10.7726, lon: 79.6367 },
+    'Pudukkottai':     { lat: 10.3797, lon: 78.8199 },
+    'Sivaganga':       { lat: 9.8478,  lon: 78.4800 },
+    'Ramanathapuram':  { lat: 9.3762,  lon: 78.8302 },
+    'Virudhunagar':    { lat: 9.5851,  lon: 77.9620 },
+    'Thoothukudi':     { lat: 8.7642,  lon: 78.1348 },
+    'Tenkasi':         { lat: 8.9593,  lon: 77.3152 },
+    'Theni':           { lat: 10.0104, lon: 77.4773 },
+    'Nilgiris':        { lat: 11.4916, lon: 76.7337 },
   };
 
   useEffect(() => {
@@ -60,7 +86,17 @@ function Dashboard() {
     loadDashboard();
   }, []);
 
-  
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (!e.target.closest('.user-menu')) {
+        setShowUserMenu(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener(
+      'mousedown', handleClickOutside
+    );
+  }, []);
 
   const loadDashboard = async () => {
     setPageLoading(true);
@@ -70,55 +106,127 @@ function Dashboard() {
         { headers: { Authorization: `Bearer ${token}` } }
       );
       if (res.data.has_profile) {
-        setProfile(res.data.profile);
-        fetchWeather(res.data.profile.district);
-        const soilVals = getSoilValues(
-          res.data.profile.crop_type,
-          res.data.profile.soil_type
-        );
-        setForm(prev => ({
-          ...prev,
-          N: soilVals.N.toString(),
-          P: soilVals.P.toString(),
-          K: soilVals.K.toString(),
-          ph: soilVals.ph.toString()
-        }));
+        const p = res.data.profile;
+        setProfile(p);
+
+        // Load history from DB
+        try {
+          const histRes = await axios.get(
+            'http://127.0.0.1:8000/history',
+            { headers: { Authorization: `Bearer ${token}` } }
+          );
+          setHistory(histRes.data.history || []);
+        } catch { }
+
+        // Fetch weather then AUTO PREDICT
+        await fetchWeatherAndPredict(p);
       }
-
-      // Load history
-      try {
-        const histRes = await axios.get(
-          'http://127.0.0.1:8000/history',
-          { headers: { Authorization: `Bearer ${token}` } }
-        );
-        setHistory(histRes.data.history || []);
-      } catch { }
-
     } catch {
       navigate('/login');
     }
     setPageLoading(false);
   };
 
-  const fetchWeather = async (district) => {
+  const fetchWeatherAndPredict = async (
+    profileData, forcePredict = false
+  ) => {
     setWeatherLoading(true);
     try {
-      const coords = districtCoords[district] ||
-                     { lat: 11.0168, lon: 76.9558 };
-      const res = await axios.get(
+      const coords = districtCoords[
+        profileData.district
+      ] || { lat: 11.0168, lon: 76.9558 };
+
+      const weatherRes = await axios.get(
         `https://api.open-meteo.com/v1/forecast?latitude=${coords.lat}&longitude=${coords.lon}&current=temperature_2m,relative_humidity_2m,precipitation,wind_speed_10m,weathercode&timezone=Asia/Kolkata`
       );
-      const curr = res.data.current;
-      setWeather({
+
+      const curr = weatherRes.data.current;
+      const weatherData = {
         temperature: curr.temperature_2m,
         humidity: curr.relative_humidity_2m,
         rainfall: curr.precipitation,
         windSpeed: curr.wind_speed_10m,
         condition: getWeatherCondition(curr.weathercode),
         emoji: getWeatherEmoji(curr.weathercode)
-      });
-    } catch { }
+      };
+      setWeather(weatherData);
+
+      // Get soil values from profile
+      const soilVals = getSoilValues(
+        profileData.crop_type,
+        profileData.soil_type
+      );
+
+      // Build prediction values
+      const predValues = {
+        N: soilVals.N,
+        P: soilVals.P,
+        K: soilVals.K,
+        temperature: weatherData.temperature,
+        humidity: weatherData.humidity,
+        rainfall: weatherData.rainfall,
+        ph: soilVals.ph
+      };
+
+      // Update form display
+      setForm(Object.fromEntries(
+        Object.entries(predValues).map(
+          ([k, v]) => [k, v.toString()]
+        )
+      ));
+
+      // Check if already predicted today
+      const today = new Date().toLocaleDateString('en-IN');
+      const lastPredDate = localStorage.getItem('lastPredDate');
+
+      if (lastPredDate === today && !forcePredict) {
+        console.log('Already predicted today');
+        setWeatherLoading(false);
+        return;
+      }
+
+      // AUTO PREDICT
+      setLoading(true);
+      const predRes = await axios.post(
+        'http://127.0.0.1:8000/predict',
+        predValues,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      setResult(predRes.data);
+      setAutoPredicted(true);
+
+      // Save today's date
+      localStorage.setItem('lastPredDate', today);
+
+      // Get crop recommendations
+      const recs = cropRecommendation(
+        predValues.N, predValues.P, predValues.K,
+        predValues.temperature, predValues.humidity,
+        predValues.ph, predValues.rainfall
+      );
+      setRecommendations(recs);
+
+      // Update history
+      const newEntry = {
+        time: new Date().toLocaleTimeString('en-IN', {
+          hour: '2-digit', minute: '2-digit'
+        }),
+        date: today,
+        risk_score: predRes.data.risk_score,
+        risk_status: predRes.data.status
+      };
+      setHistory(prev => [...prev, newEntry].slice(-7));
+
+      // Show result tab if HIGH RISK
+      if (predRes.data.color === 'red') {
+        setActiveTab('predict');
+      }
+
+    } catch (err) {
+      console.log('Weather/predict error:', err);
+    }
     setWeatherLoading(false);
+    setLoading(false);
   };
 
   const getWeatherCondition = (code) => {
@@ -143,16 +251,6 @@ function Dashboard() {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
-  const handleAutoFill = () => {
-    if (!weather) return;
-    setForm(prev => ({
-      ...prev,
-      temperature: weather.temperature.toString(),
-      humidity: weather.humidity.toString(),
-      rainfall: weather.rainfall.toString()
-    }));
-  };
-
   const handlePredict = async () => {
     for (let key in form) {
       if (!form[key]) {
@@ -171,6 +269,7 @@ function Dashboard() {
         { headers: { Authorization: `Bearer ${token}` } }
       );
       setResult(res.data);
+      setAutoPredicted(false);
       setActiveTab('predict');
 
       const recs = cropRecommendation(
@@ -180,7 +279,6 @@ function Dashboard() {
       );
       setRecommendations(recs);
 
-      // Update history
       const newEntry = {
         time: new Date().toLocaleTimeString('en-IN', {
           hour: '2-digit', minute: '2-digit'
@@ -266,6 +364,12 @@ function Dashboard() {
           <p style={{ color: theme.colors.textMuted }}>
             Loading SmartCrop...
           </p>
+          <p style={{
+            color: theme.colors.textMuted,
+            fontSize: '12px', marginTop: '4px'
+          }}>
+            Fetching live weather & running auto prediction...
+          </p>
         </div>
       </div>
     );
@@ -285,173 +389,182 @@ function Dashboard() {
         subtitle="AI Crop Protection System"
         buttons={
           <>
-            <NavButton onClick={() => navigate('/chatbot')}>
-              🤖 AI Chat
-            </NavButton>
-            <NavButton onClick={() => navigate('/insurance')}>
-              🛡️ Insurance
-            </NavButton>
-            <NavButton onClick={() => navigate('/government')}>
-              🏛️ Govt
-            </NavButton>
+            {/* Risk Analysis — always visible in navbar */}
             <NavButton
-              onClick={() => navigate('/insurance-company')}
+              onClick={() => navigate('/risk-analysis')}
+              variant="solid"
             >
-              🏢 Insurer
+              🧠 Risk Analysis
             </NavButton>
+
             <NavButton onClick={handleChangeLanguage}>
               🌐 {lang}
             </NavButton>
-            <div style={{ position: 'relative' }}>
-  <button
-    onClick={() => setShowUserMenu(!showUserMenu)}
-    style={{
-      backgroundColor: 'rgba(255,255,255,0.15)',
-      border: '1.5px solid rgba(255,255,255,0.4)',
-      color: 'white', padding: '6px 14px',
-      borderRadius: '9999px', cursor: 'pointer',
-      fontSize: '12px', fontWeight: '600',
-      display: 'flex', alignItems: 'center', gap: '6px',
-      transition: 'all 0.2s ease'
-    }}
-  >
-    👤 {user.name?.split(' ')[0]}
-    <span style={{
-      fontSize: '10px',
-      transform: showUserMenu
-        ? 'rotate(180deg)' : 'rotate(0deg)',
-      transition: 'transform 0.2s ease',
-      display: 'inline-block'
-    }}>
-      ▼
-    </span>
-  </button>
 
-  {/* Dropdown Menu */}
-  {showUserMenu && (
-    <div style={{
-      position: 'absolute', top: '42px', right: 0,
-      backgroundColor: 'white',
-      borderRadius: '12px',
-      boxShadow: '0 8px 24px rgba(0,0,0,0.15)',
-      border: `1px solid ${theme.colors.border}`,
-      minWidth: '200px', zIndex: 1000,
-      animation: 'fadeIn 0.2s ease',
-      overflow: 'hidden'
-    }}>
+            {/* User Dropdown */}
+            <div
+              style={{ position: 'relative' }}
+              className="user-menu"
+            >
+              <button
+                onClick={() => setShowUserMenu(!showUserMenu)}
+                style={{
+                  backgroundColor: 'rgba(255,255,255,0.15)',
+                  border: '1.5px solid rgba(255,255,255,0.4)',
+                  color: 'white', padding: '6px 14px',
+                  borderRadius: '9999px', cursor: 'pointer',
+                  fontSize: '12px', fontWeight: '600',
+                  display: 'flex', alignItems: 'center',
+                  gap: '6px', transition: 'all 0.2s ease'
+                }}
+              >
+                👤 {user.name?.split(' ')[0]}
+                <span style={{
+                  fontSize: '10px',
+                  transform: showUserMenu
+                    ? 'rotate(180deg)' : 'rotate(0deg)',
+                  transition: 'transform 0.2s ease',
+                  display: 'inline-block'
+                }}>
+                  ▼
+                </span>
+              </button>
 
-      {/* User Info */}
-      <div style={{
-        padding: '14px 16px',
-        borderBottom: `1px solid ${theme.colors.border}`,
-        backgroundColor: '#f8fafc'
-      }}>
-        <p style={{
-          fontWeight: '700', fontSize: '14px',
-          color: theme.colors.textPrimary, margin: '0 0 2px'
-        }}>
-          👤 {user.name}
-        </p>
-        <p style={{
-          fontSize: '12px', color: theme.colors.textMuted,
-          margin: 0
-        }}>
-          📍 {user.district}
-        </p>
-        {profile && (
-          <p style={{
-            fontSize: '12px', color: theme.colors.textMuted,
-            margin: '2px 0 0'
-          }}>
-            🌾 {profile.crop_type} • {profile.land_size} acres
-          </p>
-        )}
-      </div>
+              {showUserMenu && (
+                <div style={{
+                  position: 'absolute', top: '42px', right: 0,
+                  backgroundColor: 'white',
+                  borderRadius: '12px',
+                  boxShadow: '0 8px 24px rgba(0,0,0,0.15)',
+                  border: `1px solid ${theme.colors.border}`,
+                  minWidth: '210px', zIndex: 1000,
+                  animation: 'fadeIn 0.2s ease',
+                  overflow: 'hidden'
+                }}>
 
-      {/* Menu Items */}
-      {[
-        { icon: '🛡️', label: 'Insurance', 
-          action: () => navigate('/insurance') },
-        { icon: '🏛️', label: 'Govt Dashboard',
-          action: () => navigate('/government') },
-        { icon: '🏢', label: 'Insurance Co.',
-          action: () => navigate('/insurance-company') },
-        { icon: '🤖', label: 'AI Assistant',
-          action: () => navigate('/chatbot') },
-        { icon: '🌐', label: `Language (${lang})`,
-          action: handleChangeLanguage },
-      ].map((item, i) => (
-        <button
-          key={i}
-          onClick={() => {
-            setShowUserMenu(false);
-            item.action();
-          }}
-          style={{
-            width: '100%', padding: '10px 16px',
-            backgroundColor: 'transparent',
-            border: 'none', cursor: 'pointer',
-            display: 'flex', alignItems: 'center',
-            gap: '10px', fontSize: '13px',
-            color: theme.colors.textPrimary,
-            textAlign: 'left',
-            transition: 'background 0.15s ease',
-            fontFamily: 'inherit'
-          }}
-          onMouseEnter={e =>
-            e.currentTarget.style.backgroundColor = '#f0f4f8'}
-          onMouseLeave={e =>
-            e.currentTarget.style.backgroundColor = 'transparent'}
-        >
-          <span style={{ fontSize: '16px' }}>{item.icon}</span>
-          {item.label}
-        </button>
-      ))}
+                  {/* User Info */}
+                  <div style={{
+                    padding: '14px 16px',
+                    borderBottom:
+                      `1px solid ${theme.colors.border}`,
+                    backgroundColor: '#f8fafc'
+                  }}>
+                    <p style={{
+                      fontWeight: '700', fontSize: '14px',
+                      color: theme.colors.textPrimary,
+                      margin: '0 0 2px'
+                    }}>
+                      👤 {user.name}
+                    </p>
+                    <p style={{
+                      fontSize: '12px',
+                      color: theme.colors.textMuted, margin: 0
+                    }}>
+                      📍 {user.district}
+                    </p>
+                    {profile && (
+                      <p style={{
+                        fontSize: '12px',
+                        color: theme.colors.textMuted,
+                        margin: '2px 0 0'
+                      }}>
+                        🌾 {profile.crop_type} •
+                        {profile.land_size} acres
+                      </p>
+                    )}
+                  </div>
 
-      {/* Divider */}
-      <div style={{
-        borderTop: `1px solid ${theme.colors.border}`
-      }} />
+                  {/* Menu Items */}
+                  {[
+                    { icon: '📊', label: 'Season Analysis',
+                      action: () => navigate('/season-analysis') },
+                    { icon: '🛡️', label: 'Insurance',
+                      action: () => navigate('/insurance') },
+                    { icon: '🏛️', label: 'Govt Dashboard',
+                      action: () => navigate('/government') },
+                    { icon: '🏢', label: 'Insurance Co.',
+                      action: () => navigate('/insurance-company') },
+                    { icon: '🤖', label: 'AI Assistant',
+                      action: () => navigate('/chatbot') },
+                    { icon: '✏️', label: 'Edit Farm Profile',
+                      action: () => navigate('/profile-setup') },
+                    { icon: '🌐', label: `Language (${lang})`,
+                      action: handleChangeLanguage },
+                  ].map((item, i) => (
+                    <button
+                      key={i}
+                      onClick={() => {
+                        setShowUserMenu(false);
+                        item.action();
+                      }}
+                      style={{
+                        width: '100%', padding: '10px 16px',
+                        backgroundColor: 'transparent',
+                        border: 'none', cursor: 'pointer',
+                        display: 'flex', alignItems: 'center',
+                        gap: '10px', fontSize: '13px',
+                        color: theme.colors.textPrimary,
+                        textAlign: 'left',
+                        transition: 'background 0.15s ease',
+                        fontFamily: 'inherit'
+                      }}
+                      onMouseEnter={e =>
+                        e.currentTarget.style.backgroundColor =
+                          '#f0f4f8'}
+                      onMouseLeave={e =>
+                        e.currentTarget.style.backgroundColor =
+                          'transparent'}
+                    >
+                      <span style={{ fontSize: '16px' }}>
+                        {item.icon}
+                      </span>
+                      {item.label}
+                    </button>
+                  ))}
 
-      {/* Logout */}
-      <button
-        onClick={() => {
-          setShowUserMenu(false);
-          handleLogout();
-        }}
-        style={{
-          width: '100%', padding: '10px 16px',
-          backgroundColor: 'transparent',
-          border: 'none', cursor: 'pointer',
-          display: 'flex', alignItems: 'center',
-          gap: '10px', fontSize: '13px',
-          color: '#dc2626', textAlign: 'left',
-          transition: 'background 0.15s ease',
-          fontFamily: 'inherit', fontWeight: '600'
-        }}
-        onMouseEnter={e =>
-          e.currentTarget.style.backgroundColor = '#fff5f5'}
-        onMouseLeave={e =>
-          e.currentTarget.style.backgroundColor = 'transparent'}
-      >
-        <span style={{ fontSize: '16px' }}>🚪</span>
-        Logout
-      </button>
-    </div>
-  )}
-</div>
+                  <div style={{
+                    borderTop: `1px solid ${theme.colors.border}`
+                  }} />
+
+                  {/* Logout */}
+                  <button
+                    onClick={() => {
+                      setShowUserMenu(false);
+                      handleLogout();
+                    }}
+                    style={{
+                      width: '100%', padding: '10px 16px',
+                      backgroundColor: 'transparent',
+                      border: 'none', cursor: 'pointer',
+                      display: 'flex', alignItems: 'center',
+                      gap: '10px', fontSize: '13px',
+                      color: '#dc2626', textAlign: 'left',
+                      transition: 'background 0.15s ease',
+                      fontFamily: 'inherit', fontWeight: '600'
+                    }}
+                    onMouseEnter={e =>
+                      e.currentTarget.style.backgroundColor =
+                        '#fff5f5'}
+                    onMouseLeave={e =>
+                      e.currentTarget.style.backgroundColor =
+                        'transparent'}
+                  >
+                    <span style={{ fontSize: '16px' }}>🚪</span>
+                    Logout
+                  </button>
+                </div>
+              )}
+            </div>
           </>
         }
       />
 
-      {/* Main Layout — Two columns */}
+      {/* Main Layout */}
       <div style={{
         display: 'grid',
         gridTemplateColumns: '340px 1fr',
-        gap: '16px',
-        padding: '16px',
-        maxWidth: '1200px',
-        margin: '0 auto',
+        gap: '16px', padding: '16px',
+        maxWidth: '1200px', margin: '0 auto',
         height: 'calc(100vh - 60px)',
         overflow: 'hidden'
       }}>
@@ -459,19 +572,16 @@ function Dashboard() {
         {/* LEFT COLUMN */}
         <div style={{
           display: 'flex', flexDirection: 'column',
-          gap: '12px', overflowY: 'auto',
-          paddingRight: '4px'
+          gap: '12px', overflowY: 'auto', paddingRight: '4px'
         }}>
 
           {/* Farm Profile Card */}
           {profile && (
             <div style={{
               background: `linear-gradient(135deg,
-                ${theme.colors.secondary} 0%,
-                #1a5c32 100%)`,
+                ${theme.colors.secondary} 0%, #1a5c32 100%)`,
               borderRadius: theme.radius.lg,
-              padding: '16px',
-              animation: 'fadeIn 0.4s ease'
+              padding: '16px', animation: 'fadeIn 0.4s ease'
             }}>
               <div style={{
                 display: 'flex', justifyContent: 'space-between',
@@ -503,11 +613,12 @@ function Dashboard() {
                 </div>
               </div>
               <div style={{
-                display: 'grid', gridTemplateColumns: '1fr 1fr',
-                gap: '6px'
+                display: 'grid',
+                gridTemplateColumns: '1fr 1fr', gap: '6px'
               }}>
                 {[
-                  { icon: '📐', val: `${profile.land_size} acres` },
+                  { icon: '📐',
+                    val: `${profile.land_size} acres` },
                   { icon: '🧪', val: profile.soil_type },
                   { icon: '💧', val: profile.irrigation_type },
                   { icon: '📍', val: profile.village },
@@ -529,8 +640,7 @@ function Dashboard() {
           {/* Weather Card */}
           <div style={{
             backgroundColor: 'white',
-            borderRadius: theme.radius.lg,
-            padding: '16px',
+            borderRadius: theme.radius.lg, padding: '16px',
             boxShadow: theme.shadows.md,
             border: `1px solid ${theme.colors.border}`
           }}>
@@ -545,20 +655,21 @@ function Dashboard() {
                 🌤️ Live Weather —{' '}
                 {profile?.district || user.district}
               </p>
-              {weather && (
-                <button
-                  onClick={handleAutoFill}
-                  style={{
-                    backgroundColor: theme.colors.secondary,
-                    color: 'white', border: 'none',
-                    borderRadius: '20px', padding: '4px 10px',
-                    cursor: 'pointer', fontSize: '11px',
-                    fontWeight: '600'
-                  }}
-                >
-                  ⚡ Auto-fill
-                </button>
-              )}
+              {/* Refresh button */}
+              <button
+                onClick={() => profile &&
+                  fetchWeatherAndPredict(profile, true)
+                }
+                style={{
+                  backgroundColor: theme.colors.secondary,
+                  color: 'white', border: 'none',
+                  borderRadius: '20px', padding: '4px 10px',
+                  cursor: 'pointer', fontSize: '11px',
+                  fontWeight: '600'
+                }}
+              >
+                🔄 Refresh
+              </button>
             </div>
 
             {weatherLoading && (
@@ -566,28 +677,24 @@ function Dashboard() {
                 color: theme.colors.textMuted,
                 fontSize: '12px', textAlign: 'center'
               }}>
-                Loading weather...
+                Loading weather & predicting...
               </p>
             )}
 
             {weather && !weatherLoading && (
               <div style={{
                 display: 'grid',
-                gridTemplateColumns: '1fr 1fr',
-                gap: '8px'
+                gridTemplateColumns: '1fr 1fr', gap: '8px'
               }}>
                 {[
                   { icon: weather.emoji,
                     label: 'Condition',
                     val: weather.condition },
-                  { icon: '🌡️',
-                    label: 'Temperature',
+                  { icon: '🌡️', label: 'Temperature',
                     val: `${weather.temperature}°C` },
-                  { icon: '💧',
-                    label: 'Humidity',
+                  { icon: '💧', label: 'Humidity',
                     val: `${weather.humidity}%` },
-                  { icon: '🌧️',
-                    label: 'Rainfall',
+                  { icon: '🌧️', label: 'Rainfall',
                     val: `${weather.rainfall}mm` },
                 ].map((w, i) => (
                   <div key={i} style={{
@@ -621,25 +728,18 @@ function Dashboard() {
           {/* Input Form */}
           <div style={{
             backgroundColor: 'white',
-            borderRadius: theme.radius.lg,
-            padding: '16px',
+            borderRadius: theme.radius.lg, padding: '16px',
             boxShadow: theme.shadows.md,
-            border: `1px solid ${theme.colors.border}`,
-            flex: 1
+            border: `1px solid ${theme.colors.border}`, flex: 1
           }}>
-            <div style={{
-              display: 'flex', justifyContent: 'space-between',
-              alignItems: 'center', marginBottom: '12px'
+            <p style={{
+              fontWeight: '700', fontSize: '13px',
+              color: theme.colors.textPrimary,
+              marginBottom: '10px'
             }}>
-              <p style={{
-                fontWeight: '700', fontSize: '13px',
-                color: theme.colors.textPrimary
-              }}>
-                📊 {t.enterParams}
-              </p>
-            </div>
+              📊 {t.enterParams}
+            </p>
 
-            {/* Auto-fill note */}
             <div style={{
               backgroundColor: '#f0fdf4',
               border: '1px solid #bbf7d0',
@@ -647,8 +747,8 @@ function Dashboard() {
               marginBottom: '12px', fontSize: '11px',
               color: '#15803d'
             }}>
-              ✅ N, P, K, pH auto-filled from your profile.
-              Click ⚡ Auto-fill above for weather values.
+              ✅ Values auto-filled from profile +
+              live weather. Click 🔄 Refresh to update.
             </div>
 
             <div style={{
@@ -698,23 +798,50 @@ function Dashboard() {
         {/* RIGHT COLUMN */}
         <div style={{
           display: 'flex', flexDirection: 'column',
-          gap: '12px', overflowY: 'auto',
-          paddingRight: '4px'
+          gap: '12px', overflowY: 'auto', paddingRight: '4px'
         }}>
+
+          {/* Auto Prediction Banner */}
+          {result && autoPrediected && (
+            <div style={{
+              backgroundColor: '#f0fdf4',
+              border: '1px solid #86efac',
+              borderRadius: '10px', padding: '10px 14px',
+              display: 'flex', justifyContent: 'space-between',
+              alignItems: 'center',
+              animation: 'fadeIn 0.4s ease'
+            }}>
+              <p style={{
+                margin: 0, fontSize: '12px',
+                color: '#15803d', fontWeight: '600'
+              }}>
+                🤖 Auto prediction done using
+                today's live weather data
+              </p>
+              <p style={{
+                margin: 0, fontSize: '11px',
+                color: '#6b7280'
+              }}>
+                {new Date().toLocaleDateString('en-IN')}
+              </p>
+            </div>
+          )}
 
           {/* Tabs */}
           <div style={{
             backgroundColor: 'white',
-            borderRadius: theme.radius.lg,
-            padding: '6px',
+            borderRadius: theme.radius.lg, padding: '6px',
             boxShadow: theme.shadows.sm,
             border: `1px solid ${theme.colors.border}`,
             display: 'flex', gap: '4px'
           }}>
             {[
-              { id: 'predict',  icon: '🔍', label: 'Prediction' },
-              { id: 'history',  icon: '📈', label: 'History' },
-              { id: 'recommend',icon: '🌱', label: 'Crops' },
+              { id: 'predict',   icon: '🔍',
+                label: 'Prediction' },
+              { id: 'history',   icon: '📈',
+                label: 'History' },
+              { id: 'recommend', icon: '🌱',
+                label: 'Crops' },
             ].map(tab => (
               <button
                 key={tab.id}
@@ -727,7 +854,8 @@ function Dashboard() {
                     ? 'white' : theme.colors.textSecondary,
                   border: 'none', borderRadius: '10px',
                   cursor: 'pointer', fontWeight: '600',
-                  fontSize: '13px', transition: 'all 0.2s ease',
+                  fontSize: '13px',
+                  transition: 'all 0.2s ease',
                   display: 'flex', alignItems: 'center',
                   justifyContent: 'center', gap: '6px'
                 }}
@@ -747,9 +875,10 @@ function Dashboard() {
                   padding: '40px', textAlign: 'center',
                   boxShadow: theme.shadows.md,
                   border: `1px solid ${theme.colors.border}`,
-                  height: '100%',
-                  display: 'flex', flexDirection: 'column',
-                  alignItems: 'center', justifyContent: 'center'
+                  height: '100%', display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center'
                 }}>
                   <div style={{
                     fontSize: '56px', marginBottom: '16px'
@@ -760,22 +889,21 @@ function Dashboard() {
                     color: theme.colors.textPrimary,
                     marginBottom: '8px'
                   }}>
-                    Ready to Predict
+                    Loading prediction...
                   </h3>
                   <p style={{
                     color: theme.colors.textMuted,
                     fontSize: '14px'
                   }}>
-                    Fill in crop parameters and click
-                    Predict to see your risk score
+                    Fetching live weather data
+                    for auto prediction
                   </p>
                 </div>
               ) : (() => {
                 const colors = getRiskColors(result.color);
                 return (
-                  <div style={{
-                    animation: 'fadeIn 0.4s ease'
-                  }}>
+                  <div style={{ animation: 'fadeIn 0.4s ease' }}>
+
                     {/* Main Score Card */}
                     <div style={{
                       backgroundColor: colors.bg,
@@ -826,13 +954,13 @@ function Dashboard() {
                       gridTemplateColumns: '1fr 1fr 1fr',
                       gap: '10px', marginBottom: '12px'
                     }}>
-                      {/* Risk Factors */}
                       <div style={{
                         backgroundColor: 'white',
                         borderRadius: theme.radius.md,
                         padding: '14px',
                         boxShadow: theme.shadows.sm,
-                        border: `1px solid ${theme.colors.border}`
+                        border:
+                          `1px solid ${theme.colors.border}`
                       }}>
                         <p style={{
                           fontSize: '11px', fontWeight: '700',
@@ -847,23 +975,20 @@ function Dashboard() {
                           <p key={i} style={{
                             fontSize: '12px',
                             color: colors.text,
-                            marginBottom: '4px',
-                            display: 'flex',
-                            alignItems: 'flex-start',
-                            gap: '4px'
+                            marginBottom: '4px'
                           }}>
                             • {f}
                           </p>
                         ))}
                       </div>
 
-                      {/* Advice */}
                       <div style={{
                         backgroundColor: 'white',
                         borderRadius: theme.radius.md,
                         padding: '14px',
                         boxShadow: theme.shadows.sm,
-                        border: `1px solid ${theme.colors.border}`
+                        border:
+                          `1px solid ${theme.colors.border}`
                       }}>
                         <p style={{
                           fontSize: '11px', fontWeight: '700',
@@ -882,13 +1007,13 @@ function Dashboard() {
                         </p>
                       </div>
 
-                      {/* Insurance */}
                       <div style={{
                         backgroundColor: 'white',
                         borderRadius: theme.radius.md,
                         padding: '14px',
                         boxShadow: theme.shadows.sm,
-                        border: `1px solid ${theme.colors.border}`
+                        border:
+                          `1px solid ${theme.colors.border}`
                       }}>
                         <p style={{
                           fontSize: '11px', fontWeight: '700',
@@ -901,8 +1026,7 @@ function Dashboard() {
                         <p style={{
                           fontSize: '12px',
                           color: colors.text,
-                          fontWeight: '600',
-                          lineHeight: 1.5
+                          fontWeight: '600', lineHeight: 1.5
                         }}>
                           {result.insurance_status}
                         </p>
@@ -921,9 +1045,12 @@ function Dashboard() {
                           borderRadius: theme.radius.md,
                           fontSize: '15px', fontWeight: '700',
                           cursor: 'pointer',
-                          boxShadow: '0 4px 12px rgba(220,38,38,0.3)',
-                          display: 'flex', alignItems: 'center',
-                          justifyContent: 'center', gap: '8px',
+                          boxShadow:
+                            '0 4px 12px rgba(220,38,38,0.3)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: '8px',
                           animation: 'pulse 2s infinite'
                         }}
                       >
@@ -940,8 +1067,7 @@ function Dashboard() {
           {activeTab === 'history' && (
             <div style={{
               backgroundColor: 'white',
-              borderRadius: theme.radius.lg,
-              padding: '20px',
+              borderRadius: theme.radius.lg, padding: '20px',
               boxShadow: theme.shadows.md,
               border: `1px solid ${theme.colors.border}`,
               flex: 1
@@ -988,7 +1114,8 @@ function Dashboard() {
                           [`${v}%`, 'Risk Score']}
                         contentStyle={{
                           borderRadius: '10px',
-                          border: `1px solid ${theme.colors.border}`,
+                          border:
+                            `1px solid ${theme.colors.border}`,
                           fontSize: '12px'
                         }}
                       />
@@ -1057,8 +1184,7 @@ function Dashboard() {
           {activeTab === 'recommend' && (
             <div style={{
               backgroundColor: 'white',
-              borderRadius: theme.radius.lg,
-              padding: '20px',
+              borderRadius: theme.radius.lg, padding: '20px',
               boxShadow: theme.shadows.md,
               border: `1px solid ${theme.colors.border}`,
               flex: 1
@@ -1078,8 +1204,7 @@ function Dashboard() {
                 }}>
                   <div style={{ fontSize: '40px' }}>🌾</div>
                   <p style={{ marginTop: '12px' }}>
-                    Make a prediction first to get
-                    crop recommendations
+                    Loading recommendations...
                   </p>
                 </div>
               ) : (
@@ -1137,7 +1262,8 @@ function Dashboard() {
                   <div style={{
                     backgroundColor: '#fffbeb',
                     border: '1px solid #fde68a',
-                    borderRadius: '8px', padding: '10px 14px',
+                    borderRadius: '8px',
+                    padding: '10px 14px',
                     fontSize: '12px', color: '#92400e'
                   }}>
                     💡 Consult your local KVK for

@@ -8,9 +8,7 @@ import Insurance from './pages/Insurance';
 import Chatbot from './pages/Chatbot';
 import GovernmentDashboard from './pages/GovernmentDashboard';
 import InsuranceDashboard from './pages/InsuranceDashboard';
-
-
-
+import RiskAnalysis from './pages/RiskAnalysis';
 
 function App() {
   const token = localStorage.getItem('token');
@@ -34,6 +32,7 @@ function App() {
         <Route path="/chatbot" element={<Chatbot />} />
         <Route path="/government" element={<GovernmentDashboard />} />
         <Route path="/insurance-company" element={<InsuranceDashboard />} />
+        <Route path="/risk-analysis" element={<RiskAnalysis />} />
       </Routes>
     </BrowserRouter>
   );

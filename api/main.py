@@ -556,3 +556,80 @@ def update_claim_status(
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=500, detail=str(e))
+    
+# ─────────────────────────────────────────
+# ROUTE — Get detailed prediction history
+# ─────────────────────────────────────────
+@app.get("/risk-history")
+def get_risk_history(
+    current_user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    try:
+        predictions = db.query(RiskPrediction).filter(
+            RiskPrediction.phone == current_user["phone"]
+        ).order_by(
+            RiskPrediction.predicted_at.desc()
+        ).limit(7).all()
+
+        # Calculate consecutive high risk days
+        consecutive = 0
+        for p in predictions:
+            if p.risk_score >= 60:
+                consecutive += 1
+            else:
+                break
+
+        history = [
+            {
+                "risk_score": p.risk_score,
+                "risk_status": p.risk_status,
+                "date": str(p.predicted_at)
+            }
+            for p in predictions
+        ]
+
+        # Weighted cumulative risk
+        weights = [0.25, 0.20, 0.15, 0.12,
+                   0.10, 0.10, 0.08]
+        if history:
+            weighted = sum(
+                h["risk_score"] * weights[i]
+                for i, h in enumerate(history)
+                if i < len(weights)
+            )
+            total_w = sum(
+                weights[i]
+                for i in range(min(len(history),
+                                   len(weights)))
+            )
+            cumulative = round(weighted / total_w) \
+                if total_w > 0 else 0
+        else:
+            cumulative = 0
+
+        insurance_eligible = consecutive >= 3
+
+        return {
+            "history": history,
+            "consecutive_high_risk": consecutive,
+            "cumulative_risk": cumulative,
+            "insurance_eligible": insurance_eligible,
+            "days_until_trigger": max(
+                0, 3 - consecutive
+            ),
+            "message": (
+                f"High risk for {consecutive} consecutive"
+                f" days. Insurance triggered!"
+                if insurance_eligible
+                else f"High risk for {consecutive} day(s)."
+                f" Need {max(0, 3-consecutive)} more days"
+                f" to trigger insurance."
+                if consecutive > 0
+                else "Crop conditions normal."
+            )
+        }
+    except Exception as e:
+        raise HTTPException(
+            status_code=500, detail=str(e)
+        )
